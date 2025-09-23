@@ -1,158 +1,154 @@
 "use client";
 import { motion } from "framer-motion";
-import { Github, Linkedin, Twitter } from "lucide-react";
+import { Github, Twitter, Mail, BookOpen, Users, MessageCircle } from "lucide-react";
 
-const Footer = () => {
-  const quickLinks = [
-    { name: "Features", href: "#features" },
-    { name: "Characters", href: "#characters" },
-    { name: "Community", href: "#community" },
-    { name: "About", href: "#about" },
-    { name: "Contact", href: "#contact" },
-  ];
+export default function Footer() {
+  const currentYear = new Date().getFullYear();
 
   const socialLinks = [
-    { name: "GitHub", href: "#", icon: Github },
-    { name: "LinkedIn", href: "#", icon: Linkedin },
-    { name: "Twitter", href: "#", icon: Twitter },
+    { icon: Github, href: "https://github.com", label: "GitHub" },
+    { icon: Twitter, href: "https://twitter.com", label: "Twitter" },
+    { icon: Mail, href: "mailto:contact@sophia.ai", label: "Email" },
+  ];
+
+  const quickLinks = [
+    { label: "Explore Characters", href: "#explore", icon: Users },
+    { label: "Start Chat", href: "#chat", icon: MessageCircle },
+    { label: "Historical Debates", href: "#debates", icon: BookOpen },
+    { label: "Knowledge Library", href: "#library", icon: BookOpen },
   ];
 
   return (
-    <footer className="bg-black/80 backdrop-blur-md border-t border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
-          {/* Left Column - Logo & Tagline */}
-          <motion.div
-            className="text-center md:text-left"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <motion.h2
-              className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-3"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            >
-              Sophia
-            </motion.h2>
-            <p className="text-gray-400 text-sm max-w-sm mx-auto md:mx-0">
-              Where AI meets History
-            </p>
-          </motion.div>
+    <footer className="relative bg-gradient-to-t from-black/5 via-white/10 to-white/20 backdrop-blur-md border-t border-black/10">
+      {/* Decorative top border */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-black/20 to-transparent" />
 
-          {/* Middle Column - Quick Links */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          {/* Brand Section */}
           <motion.div
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            className="lg:col-span-4 text-center lg:text-left"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
           >
-            <h3 className="text-white font-semibold mb-4">Quick Links</h3>
-            <div className="space-y-2">
-              {quickLinks.map((link) => (
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold text-black mb-3 tracking-tight">
+                Sophia
+              </h2>
+              <p className="text-gray-600 text-base leading-relaxed max-w-sm mx-auto lg:mx-0">
+                Where artificial intelligence meets historical wisdom, bringing the past to life through meaningful conversations.
+              </p>
+            </div>
+
+            {/* Social Links */}
+            <div className="flex justify-center lg:justify-start space-x-4">
+              {socialLinks.map((social, index) => (
                 <motion.a
-                  key={link.name}
-                  href={link.href}
-                  className="block text-gray-400 hover:text-white transition-all duration-200 relative group"
-                  whileHover={{ x: 5 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  key={social.label}
+                  href={social.href}
+                  className="w-10 h-10 rounded-full bg-white/60 backdrop-blur-sm border border-black/10 flex items-center justify-center text-gray-600 hover:text-black hover:bg-white/80 transition-all duration-300 shadow-sm hover:shadow-md"
+                  whileHover={{ scale: 1.1, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
                 >
-                  {link.name}
-                  <motion.span
-                    className="absolute left-0 bottom-0 w-0 h-px bg-gradient-to-r from-blue-400 to-purple-500 group-hover:w-full transition-all duration-300"
-                    initial={{ width: 0 }}
-                    whileHover={{ width: "100%" }}
-                  />
+                  <social.icon size={18} />
                 </motion.a>
               ))}
             </div>
           </motion.div>
 
-          {/* Right Column - Social Links */}
+          {/* Quick Links */}
           <motion.div
-            className="text-center md:text-right"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            className="lg:col-span-4"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <h3 className="text-white font-semibold mb-4">Connect</h3>
-            <div className="flex justify-center md:justify-end space-x-4">
-              {socialLinks.map((social) => {
-                const IconComponent = social.icon;
-                return (
-                  <motion.a
-                    key={social.name}
-                    href={social.href}
-                    className="group relative"
-                    whileHover={{ scale: 1.1, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                    aria-label={social.name}
-                  >
-                    <div className="w-10 h-10 bg-white/5 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/10 group-hover:border-purple-500/50 transition-all duration-300 group-hover:bg-purple-500/10">
-                      <IconComponent className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors duration-300" />
-                    </div>
-                    <motion.div
-                      className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-lg"
-                      initial={{ opacity: 0 }}
-                      whileHover={{ opacity: 1 }}
-                    />
-                  </motion.a>
-                );
-              })}
+            <h3 className="text-lg font-semibold text-black mb-6 text-center lg:text-left">
+              Explore History
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {quickLinks.map((link, index) => (
+                <motion.a
+                  key={link.label}
+                  href={link.href}
+                  className="group flex items-center space-x-3 p-3 rounded-xl bg-white/40 backdrop-blur-sm border border-black/5 hover:bg-white/60 hover:border-black/10 transition-all duration-300"
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-black/5 flex items-center justify-center group-hover:bg-black/10 transition-colors duration-300">
+                    <link.icon size={16} className="text-gray-600 group-hover:text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-black transition-colors duration-300">
+                    {link.label}
+                  </span>
+                </motion.a>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Quote Section */}
+          <motion.div
+            className="lg:col-span-4 text-center lg:text-left"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-6 border border-black/10 shadow-lg">
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded-full bg-black/5 flex items-center justify-center mx-auto lg:mx-0">
+                  <BookOpen size={24} className="text-black/60" />
+                </div>
+              </div>
+              <blockquote className="text-gray-700 text-base italic leading-relaxed mb-4">
+                "The past is never dead. It's not even past."
+              </blockquote>
+              <cite className="text-gray-500 text-sm font-medium">
+                — William Faulkner
+              </cite>
+              <div className="mt-4 pt-4 border-t border-black/5">
+                <p className="text-xs text-gray-500">
+                  Nobel Prize-winning author and historian
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>
 
-        {/* Bottom Section - Copyright */}
+        {/* Bottom Section */}
         <motion.div
-          className="pt-8 border-t border-white/10"
+          className="border-t border-black/10 mt-12 pt-8"
           initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm mb-4 md:mb-0">
-              © 2025 Sophia. All rights reserved.
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <p className="text-gray-500 text-sm">
+              © {currentYear} Sophia. All rights reserved. | Bringing history to life through AI.
             </p>
-            <motion.div
-              className="flex space-x-6 text-sm"
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <motion.a
-                href="#privacy"
-                className="text-gray-400 hover:text-white transition-colors duration-200 relative group"
-                whileHover={{ y: -1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
+            <div className="flex items-center space-x-6 text-sm">
+              <button type="button" className="text-gray-500 hover:text-black transition-colors duration-200">
                 Privacy Policy
-                <span className="absolute bottom-0 left-0 w-0 h-px bg-gradient-to-r from-blue-400 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-              </motion.a>
-              <motion.a
-                href="#terms"
-                className="text-gray-400 hover:text-white transition-colors duration-200 relative group"
-                whileHover={{ y: -1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
+              </button>
+              <button type="button" className="text-gray-500 hover:text-black transition-colors duration-200">
                 Terms of Service
-                <span className="absolute bottom-0 left-0 w-0 h-px bg-gradient-to-r from-blue-400 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-              </motion.a>
-            </motion.div>
+              </button>
+              <button type="button" className="text-gray-500 hover:text-black transition-colors duration-200">
+                Contact
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+      {/* Decorative bottom border */}
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-black/10 to-transparent" />
     </footer>
   );
-};
-
-export default Footer;
+}
