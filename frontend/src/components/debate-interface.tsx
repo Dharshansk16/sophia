@@ -1,126 +1,181 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Send, Play, Square } from "lucide-react"
-import type { Persona, ChatMessage } from "@/app/page"
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Send, Play, Square } from "lucide-react";
+import { debatesAPI, type Persona } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { FormattedMessage } from "@/lib/message-formatter";
+
+interface ChatMessage {
+  id: string;
+  content: string;
+  sender: "user" | "persona";
+  timestamp: Date;
+  citations?: string[];
+  personaIndex?: 0 | 1;
+}
 
 interface DebateInterfaceProps {
-  personas: [Persona, Persona]
+  personas: [Persona, Persona];
 }
 
 export function DebateInterface({ personas }: DebateInterfaceProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [inputValue, setInputValue] = useState("")
-  const [isDebateActive, setIsDebateActive] = useState(false)
-  const [currentSpeaker, setCurrentSpeaker] = useState<0 | 1>(0)
-  const [debateTopic, setDebateTopic] = useState("")
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isDebateActive, setIsDebateActive] = useState(false);
+  const [debateTopic, setDebateTopic] = useState("");
+  const [debateId, setDebateId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastPersonaIndex, setLastPersonaIndex] = useState<0 | 1>(1); // start with 1 so first reply is persona[0]
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
-  const startDebate = () => {
-    if (!debateTopic.trim()) return
+  const startDebate = async () => {
+    if (!debateTopic.trim() || !user) {
+      toast.error("Please enter a debate topic and ensure you're logged in");
+      return;
+    }
 
-    setIsDebateActive(true)
-    setMessages([
-      {
-        id: "1",
-        content: `Welcome to this historic debate between ${personas[0].name} and ${personas[1].name} on the topic: "${debateTopic}". Let us begin this intellectual discourse.`,
+    setIsLoading(true);
+    try {
+      // ------------------ FIX HERE ------------------
+      // Pass just an array of persona IDs
+      const participantIds = [personas[0].id, personas[1].id];
+
+      const debate = await debatesAPI.create(
+        debateTopic,
+        participantIds, // backend now expects array of strings
+        user.id
+      );
+      setDebateId(debate.id);
+      setIsDebateActive(true);
+
+      // Initial system message
+      const initialMessage: ChatMessage = {
+        id: "init-1",
+        content: `Welcome to this debate between ${personas[0].name} and ${personas[1].name} on the topic: "${debateTopic}". Let's begin.`,
         sender: "user",
         timestamp: new Date(),
-      },
-    ])
+      };
+      setMessages([initialMessage]);
 
-    // Start the debate with first persona
-    setTimeout(() => {
-      simulateDebateResponse(0, true)
-    }, 1000)
-  }
+      // Kickoff debate
+      const startingPrompt = `Begin a debate on the topic: "${debateTopic}". ${personas[0].name}, please present your opening statement. ${personas[1].name} will respond next.`;
 
-  const simulateDebateResponse = (speakerIndex: 0 | 1, isOpening = false) => {
-    const speaker = personas[speakerIndex]
-    const opponent = personas[1 - speakerIndex]
+      const response = await debatesAPI.sendMessage(debate.id, startingPrompt);
 
-    const openingStatements = [
-      `Esteemed colleague ${opponent.name}, I must respectfully present my perspective on this matter...`,
-      `My dear ${opponent.name}, while I hold great respect for your contributions to ${opponent.field.toLowerCase()}, I believe we must consider...`,
-      `Honored ${opponent.name}, your reputation precedes you, yet I find myself compelled to offer a different viewpoint...`,
-    ]
-
-    const responses = [
-      `I must respectfully disagree with my esteemed colleague's assertion...`,
-      `While ${opponent.name} raises interesting points, my research suggests...`,
-      `An intriguing perspective, yet I believe the evidence points toward...`,
-      `I appreciate ${opponent.name}'s reasoning, however, we must also consider...`,
-    ]
-
-    const content = isOpening
-      ? openingStatements[Math.floor(Math.random() * openingStatements.length)]
-      : responses[Math.floor(Math.random() * responses.length)]
-
-    const message: ChatMessage = {
-      id: Date.now().toString(),
-      content:
-        content +
-        ` The fundamental principles of ${speaker.field.toLowerCase()} demonstrate that our understanding must evolve through rigorous examination and discourse.`,
-      sender: "persona",
-      timestamp: new Date(),
-      citations: [`${speaker.name}'s Works`, "Historical Documents"],
+      if (response.aiMessage) {
+        const aiMessage: ChatMessage = {
+          id: response.aiMessage.id || `ai-${Date.now()}`,
+          content: response.aiMessage.content,
+          sender: "persona",
+          timestamp: new Date(response.aiMessage.createdAt || Date.now()),
+          personaIndex: 0,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setLastPersonaIndex(0);
+      }
+    } catch (error) {
+      console.error("Failed to create debate:", error);
+      toast.error("Failed to start debate");
+    } finally {
+      setIsLoading(false);
     }
-
-    setMessages((prev) => [...prev, message])
-    setCurrentSpeaker((1 - speakerIndex) as 0 | 1)
-
-    // Continue debate
-    if (isDebateActive && messages.length < 10) {
-      setTimeout(() => {
-        simulateDebateResponse((1 - speakerIndex) as 0 | 1)
-      }, 3000)
-    }
-  }
+  };
 
   const stopDebate = () => {
-    setIsDebateActive(false)
-  }
+    setIsDebateActive(false);
+    setDebateId(null);
+  };
 
-  const handleUserInput = () => {
-    if (!inputValue.trim()) return
+  const handleUserInput = async () => {
+    if (!inputValue.trim() || !debateId || !user) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}`,
       content: inputValue,
       sender: "user",
       timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    const messageToSend = inputValue;
+    setInputValue("");
+
+    try {
+      const response = await debatesAPI.sendMessage(debateId, messageToSend);
+
+      if (response.aiMessage) {
+        // Alternate persona
+        const nextPersonaIndex: 0 | 1 = lastPersonaIndex === 0 ? 1 : 0;
+
+        const aiMessage: ChatMessage = {
+          id: response.aiMessage.id || `ai-${Date.now()}`,
+          content: response.aiMessage.content,
+          sender: "persona",
+          timestamp: new Date(response.aiMessage.createdAt || Date.now()),
+          personaIndex: nextPersonaIndex,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setLastPersonaIndex(nextPersonaIndex);
+      }
+    } catch (error) {
+      console.error("Failed to send user message:", error);
+      toast.error("Failed to send message");
     }
+  };
 
-    setMessages((prev) => [...prev, userMessage])
-    setInputValue("")
-
-    // Pause debate for user interaction
-    setIsDebateActive(false)
+  // Auth check
+  if (!user) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <h3 className="font-bold text-lg mb-2">Authentication Required</h3>
+            <p className="text-muted-foreground mb-4">
+              Please log in to start a debate between {personas[0].name} and{" "}
+              {personas[1].name}
+            </p>
+            <Button onClick={() => (window.location.href = "/auth/login")}>
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* Debate header */}
+      {/* Header */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold font-[family-name:var(--font-playfair)] text-xl">Historical Debate</h3>
+          <h3 className="font-bold font-[family-name:var(--font-playfair)] text-xl">
+            Historical Debate
+          </h3>
           <div className="flex items-center gap-2">
             {!isDebateActive ? (
-              <Button onClick={startDebate} disabled={!debateTopic.trim()} size="sm">
+              <Button
+                onClick={startDebate}
+                disabled={!debateTopic.trim() || isLoading}
+                size="sm"
+              >
                 <Play className="h-4 w-4 mr-2" />
-                Start Debate
+                {isLoading ? "Starting..." : "Start Debate"}
               </Button>
             ) : (
               <Button onClick={stopDebate} variant="destructive" size="sm">
@@ -138,54 +193,49 @@ export function DebateInterface({ personas }: DebateInterfaceProps) {
               onChange={(e) => setDebateTopic(e.target.value)}
               placeholder="Enter a debate topic (e.g., 'The nature of time and space')"
               className="bg-background/80 border-2 border-border"
+              disabled={isLoading}
             />
           </div>
         )}
 
+        {/* Avatars */}
         <div className="flex items-center justify-center gap-8">
-          <div
-            className={`text-center transition-all ${currentSpeaker === 0 && isDebateActive ? "scale-110 ring-2 ring-primary rounded-lg p-2" : ""}`}
-          >
-            <img
-              src={personas[0].avatar || "/placeholder.svg"}
-              alt={personas[0].name}
-              className="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-border"
-            />
-            <h4 className="font-semibold text-sm">{personas[0].name}</h4>
-            <Badge variant="secondary" className="text-xs mt-1">
-              {personas[0].field}
-            </Badge>
-          </div>
-
-          <div className="text-3xl font-bold text-primary animate-pulse">VS</div>
-
-          <div
-            className={`text-center transition-all ${currentSpeaker === 1 && isDebateActive ? "scale-110 ring-2 ring-primary rounded-lg p-2" : ""}`}
-          >
-            <img
-              src={personas[1].avatar || "/placeholder.svg"}
-              alt={personas[1].name}
-              className="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-border"
-            />
-            <h4 className="font-semibold text-sm">{personas[1].name}</h4>
-            <Badge variant="secondary" className="text-xs mt-1">
-              {personas[1].field}
-            </Badge>
+          {[0, 1].map((i) => (
+            <div key={i} className="text-center">
+              <img
+                src={personas[i].avatar || "/placeholder.svg"}
+                alt={personas[i].name}
+                className="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-border"
+              />
+              <h4 className="font-semibold text-sm">{personas[i].name}</h4>
+              <Badge variant="secondary" className="text-xs mt-1">
+                {personas[i].field || "Knowledge"}
+              </Badge>
+            </div>
+          ))}
+          <div className="text-3xl font-bold text-primary animate-pulse">
+            VS
           </div>
         </div>
       </div>
 
-      {/* Messages area */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message, index) => {
-          const isPersona0 = message.sender === "persona" && index % 2 === 1
-          const isPersona1 = message.sender === "persona" && index % 2 === 0 && index > 0
+        {messages.map((message) => {
+          const isPersona0 =
+            message.sender === "persona" && message.personaIndex === 0;
+          const isPersona1 =
+            message.sender === "persona" && message.personaIndex === 1;
 
           return (
             <div
               key={message.id}
               className={`flex ${
-                message.sender === "user" ? "justify-center" : isPersona0 ? "justify-start" : "justify-end"
+                message.sender === "user"
+                  ? "justify-center"
+                  : isPersona0
+                  ? "justify-start"
+                  : "justify-end"
               }`}
             >
               <Card
@@ -193,62 +243,77 @@ export function DebateInterface({ personas }: DebateInterfaceProps) {
                   message.sender === "user"
                     ? "bg-accent text-accent-foreground border-2 border-accent"
                     : isPersona0
-                      ? "bg-card border-2 border-primary/30 shadow-md"
-                      : "bg-secondary border-2 border-accent/30 shadow-md"
+                    ? "bg-card border-2 border-primary/30 shadow-md"
+                    : "bg-secondary border-2 border-accent/30 shadow-md"
                 }`}
               >
                 <CardContent className="p-4">
                   {message.sender === "persona" && (
                     <div className="flex items-center gap-2 mb-2">
                       <img
-                        src={isPersona0 ? personas[0].avatar : personas[1].avatar}
+                        src={
+                          isPersona0 ? personas[0].avatar : personas[1].avatar
+                        }
                         alt={isPersona0 ? personas[0].name : personas[1].name}
                         className="w-6 h-6 rounded-full"
                       />
-                      <span className="font-semibold text-sm">{isPersona0 ? personas[0].name : personas[1].name}</span>
+                      <span className="font-semibold text-sm">
+                        {isPersona0 ? personas[0].name : personas[1].name}
+                      </span>
                     </div>
                   )}
 
-                  <div className={`text-sm leading-relaxed ${message.sender === "persona" ? "typewriter" : ""}`}>
-                    {message.content}
+                  <div
+                    className={`leading-relaxed ${
+                      message.sender === "persona" ? "typewriter" : ""
+                    }`}
+                  >
+                    {message.sender === "persona" ? (
+                      <FormattedMessage content={message.content} />
+                    ) : (
+                      <div className="text-sm">{message.content}</div>
+                    )}
                   </div>
 
-                  {message.citations && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {message.citations.map((citation, index) => (
-                        <Badge key={index} variant="outline" className="text-xs cursor-pointer hover:bg-accent">
-                          [{index + 1}] {citation}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="text-xs opacity-70 mt-2">{message.timestamp.toLocaleTimeString()}</div>
+                  <div className="text-xs opacity-70 mt-2">
+                    {message.timestamp.toLocaleTimeString()}
+                  </div>
                 </CardContent>
               </Card>
             </div>
-          )
+          );
         })}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area */}
+      {/* Input */}
       <div className="border-t border-border bg-card/50 backdrop-blur-sm p-4">
         <div className="flex items-center gap-2 max-w-4xl mx-auto">
           <div className="flex-1">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleUserInput();
+                }
+              }}
               placeholder="Interject with your own thoughts or questions..."
               className="bg-background/80 border-2 border-border focus:border-primary transition-colors"
+              disabled={isLoading || !isDebateActive}
             />
           </div>
-          <Button onClick={handleUserInput} disabled={!inputValue.trim()} className="quill-write">
+          <Button
+            onClick={handleUserInput}
+            disabled={!inputValue.trim() || isLoading || !isDebateActive}
+            className="quill-write"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

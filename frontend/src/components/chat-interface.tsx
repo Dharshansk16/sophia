@@ -1,84 +1,181 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Send, Mic, Paperclip } from "lucide-react"
-import type { Persona, ChatMessage } from "@/app/page"
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Send, Mic, Paperclip } from "lucide-react";
+import { conversationsAPI, type Persona, type Message } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { FormattedMessage } from "@/lib/message-formatter";
+
+interface ChatMessage {
+  id: string;
+  content: string;
+  sender: "user" | "persona";
+  timestamp: Date;
+  citations?: string[];
+}
 
 interface ChatInterfaceProps {
-  persona: Persona
+  persona: Persona;
 }
 
 export function ChatInterface({ persona }: ChatInterfaceProps) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
-      content: `Greetings! I am ${persona.name}. I'm delighted to engage in discourse with you about the mysteries of ${persona.field.toLowerCase()} and the nature of our universe. What questions burn in your curious mind?`,
+      content: `Greetings! I am ${
+        persona.name
+      }. I'm delighted to engage in discourse with you about the mysteries of ${
+        persona.field?.toLowerCase() || "knowledge"
+      } and the nature of our universe. What questions burn in your curious mind?`,
       sender: "persona",
       timestamp: new Date(),
-      citations: ["Historical Records", "Scientific Papers"],
+      // Remove hardcoded citations for greeting message
     },
-  ])
-  const [inputValue, setInputValue] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
+
+  // Initialize conversation when component mounts
+  useEffect(() => {
+    const initializeConversation = async () => {
+      if (!user) {
+        toast.error("Please log in to start a conversation");
+        return;
+      }
+
+      try {
+        const conversation = await conversationsAPI.create(
+          user.id,
+          persona.id,
+          "SINGLE"
+        );
+        setConversationId(conversation.id);
+      } catch (error) {
+        console.error("Failed to create conversation:", error);
+        toast.error("Failed to start conversation");
+      }
+    };
+
+    initializeConversation();
+  }, [user, persona.id]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return
+    if (!inputValue.trim() || !conversationId || !user) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: inputValue,
       sender: "user",
       timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setIsTyping(true);
+
+    try {
+      // Send message to backend
+      const response = await conversationsAPI.sendMessage(
+        conversationId,
+        inputValue,
+        user.id
+      );
+
+      // Remove the temporary user message and add both user and AI messages from response
+      setMessages((prev) => {
+        const withoutTemp = prev.slice(0, -1); // Remove the temporary message
+        const newMessages: ChatMessage[] = [];
+
+        // Add user message from response
+        if (response.userMessage) {
+          newMessages.push({
+            id: response.userMessage.id,
+            content: response.userMessage.content,
+            sender: "user",
+            timestamp: new Date(response.userMessage.createdAt || Date.now()),
+          });
+        }
+
+        // Add AI message from response
+        if (response.aiMessage) {
+          newMessages.push({
+            id: response.aiMessage.id,
+            content: response.aiMessage.content,
+            sender: "persona",
+            timestamp: new Date(response.aiMessage.createdAt || Date.now()),
+            // Don't add hardcoded citations - they'll be parsed from content
+          });
+        }
+
+        return [...withoutTemp, ...newMessages];
+      });
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
+
+      // Remove the temporary user message on error
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setIsTyping(false);
     }
-
-    setMessages((prev) => [...prev, userMessage])
-    setInputValue("")
-    setIsTyping(true)
-
-    // Simulate persona response
-    setTimeout(() => {
-      const responses = [
-        `Ah, a fascinating inquiry! In my studies of ${persona.field.toLowerCase()}, I have observed that...`,
-        `Your question touches upon the very essence of what I dedicated my life to understanding...`,
-        `Indeed, this reminds me of my work on the fundamental principles that govern...`,
-        `An excellent point! Allow me to share my perspective based on years of research...`,
-      ]
-
-      const personaMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content:
-          responses[Math.floor(Math.random() * responses.length)] +
-          " The interconnectedness of all natural phenomena continues to astound me, even in this digital realm where we now converse.",
-        sender: "persona",
-        timestamp: new Date(),
-        citations: ["Research Notes", "Published Works"],
-      }
-
-      setMessages((prev) => [...prev, personaMessage])
-      setIsTyping(false)
-    }, 2000)
-  }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+      e.preventDefault();
+      handleSendMessage();
     }
+  };
+
+  // Show login prompt if user is not authenticated
+  if (!user) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <h3 className="font-bold text-lg mb-2">Authentication Required</h3>
+            <p className="text-muted-foreground mb-4">
+              Please log in to start a conversation with {persona.name}
+            </p>
+            <Button onClick={() => (window.location.href = "/auth/login")}>
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show loading state while initializing conversation
+  if (!conversationId) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-muted-foreground">
+            Preparing conversation with {persona.name}...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -91,13 +188,15 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
           className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-border"
         />
         <div className="min-w-0 flex-1">
-          <h3 className="font-bold font-[family-name:var(--font-playfair)] text-base md:text-lg truncate">{persona.name}</h3>
+          <h3 className="font-bold font-[family-name:var(--font-playfair)] text-base md:text-lg truncate">
+            {persona.name}
+          </h3>
           <div className="flex gap-2 flex-wrap">
             <Badge variant="secondary" className="text-xs">
-              {persona.field}
+              {persona.field || "Knowledge"}
             </Badge>
             <Badge variant="outline" className="text-xs">
-              {persona.era}
+              {persona.era || "Timeless"}
             </Badge>
           </div>
         </div>
@@ -106,7 +205,12 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 min-h-0">
         {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
+          <div
+            key={message.id}
+            className={`flex ${
+              message.sender === "user" ? "justify-end" : "justify-start"
+            }`}
+          >
             <Card
               className={`w-fit ${
                 message.sender === "user"
@@ -114,22 +218,26 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
                   : "max-w-[85%] md:max-w-[75%] bg-card border-2 border-border shadow-md"
               }`}
             >
-              <CardContent className={`${message.sender === "user" ? "p-2 md:p-3" : "p-3 md:p-4"}`}>
-                <div className={`text-sm leading-relaxed break-words ${message.sender === "persona" ? "typewriter" : ""}`}>
-                  {message.content}
+              <CardContent
+                className={`${
+                  message.sender === "user" ? "p-2 md:p-3" : "p-3 md:p-4"
+                }`}
+              >
+                <div
+                  className={`leading-relaxed break-words ${
+                    message.sender === "persona" ? "typewriter" : ""
+                  }`}
+                >
+                  {message.sender === "persona" ? (
+                    <FormattedMessage content={message.content} />
+                  ) : (
+                    <div className="text-sm">{message.content}</div>
+                  )}
                 </div>
 
-                {message.citations && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {message.citations.map((citation, index) => (
-                      <Badge key={index} variant="outline" className="text-xs cursor-pointer hover:bg-accent">
-                        [{index + 1}] {citation}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                <div className="text-xs opacity-70 mt-2">{message.timestamp.toLocaleTimeString()}</div>
+                <div className="text-xs opacity-70 mt-2">
+                  {message.timestamp.toLocaleTimeString()}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -151,7 +259,9 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
                       style={{ animationDelay: "0.2s" }}
                     ></div>
                   </div>
-                  <span className="text-sm text-muted-foreground">{persona.name} is contemplating...</span>
+                  <span className="text-sm text-muted-foreground">
+                    {persona.name} is contemplating...
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -171,21 +281,34 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
               onKeyPress={handleKeyPress}
               placeholder="Share your thoughts with this great mind..."
               className="pr-16 md:pr-20 bg-background/80 border-2 border-border focus:border-primary transition-colors text-sm md:text-base"
+              disabled={isTyping}
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-              <Button size="sm" variant="ghost" className="h-6 w-6 md:h-8 md:w-8 p-0">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 md:h-8 md:w-8 p-0"
+              >
                 <Paperclip className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-6 w-6 md:h-8 md:w-8 p-0">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 md:h-8 md:w-8 p-0"
+              >
                 <Mic className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
             </div>
           </div>
-          <Button onClick={handleSendMessage} disabled={!inputValue.trim()} className="quill-write flex-shrink-0">
+          <Button
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isTyping}
+            className="quill-write flex-shrink-0"
+          >
             <Send className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

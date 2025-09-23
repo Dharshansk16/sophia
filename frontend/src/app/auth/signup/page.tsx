@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import axios from "axios";
+import { authAPI } from "@/lib/api";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -21,20 +21,15 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/signUp`,
-        { name, email, password },
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-      if (res.status === 200) {
-        toast.success("Registration successful!");
-      }
-    // biome-ignore lint/suspicious/noExplicitAny: <fix>
-          } catch (err: any) {
-      toast.error(
-        err.response?.data?.error || `Something went wrong ${err.message}`
-      );
+      await authAPI.signUp(email, password, name);
+      toast.success("Registration successful! Please sign in to continue.");
+      // Redirect to login page
+      window.location.href = "/auth/login";
+    } catch (err: any) {
+      console.error("Sign up error:", err);
+      const errorMessage =
+        err.response?.data?.error || "Failed to create account";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

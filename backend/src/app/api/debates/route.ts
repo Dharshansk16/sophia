@@ -33,6 +33,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // ---------------- ASSIGN ROLES ----------------
+    const roles = ["PROPONENT", "OPPONENT", "MODERATOR"] as const;
+
     // ---------------- CREATE DEBATE ----------------
     const debate = await prisma.debate.create({
       data: {
@@ -40,9 +43,10 @@ export async function POST(req: NextRequest) {
         createdById: userId,
         conversationId: conversation.id,
         participants: {
-          create: participantIds.map((p: any) => ({
-            personaId: p.personaId,
-            role: p.role,
+          create: participantIds.map((personaId: string, idx: number) => ({
+            personaId,
+            role: roles[idx] ?? "PROPONENT", // fallback if > 3
+            orderIndex: idx,
           })),
         },
       },
@@ -50,10 +54,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(debate);
-  } catch (err) {
-    console.error("Error creating debate:", err);
+  } catch (err: any) {
+    console.error("Error creating debate:", err?.message, err);
     return NextResponse.json(
-      { error: "Failed to create debate" },
+      { error: "Failed to create debate", details: err?.message },
       { status: 500 }
     );
   }

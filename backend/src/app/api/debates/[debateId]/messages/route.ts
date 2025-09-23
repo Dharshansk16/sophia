@@ -4,13 +4,16 @@ import { fetchContextForAI } from "@/lib/context/llm-context";
 import { callDebateAI } from "@/lib/llm-call/callDebateAI";
 
 type RequestBody = {
-  debateId: string;
   initialMessage?: string;
 };
 
-export async function POST(req: NextRequest) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ debateId: string }> }
+) {
   try {
-    const { debateId, initialMessage } = (await req.json()) as RequestBody;
+    const { debateId } = await context.params;
+    const { initialMessage } = (await req.json()) as RequestBody;
 
     if (!debateId) {
       return NextResponse.json(
@@ -84,6 +87,40 @@ export async function POST(req: NextRequest) {
     console.error("Error creating debate message:", err);
     return NextResponse.json(
       { error: "Failed to create message" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ debateId: string }> }
+) {
+  try {
+    const { debateId } = await context.params;
+
+    if (!debateId) {
+      return NextResponse.json(
+        { error: "debateId is required" },
+        { status: 400 }
+      );
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { conversation: { debateId } },
+      include: {
+        authorUser: { select: { id: true, name: true } },
+        authorPersona: { select: { id: true, name: true, imageUrl: true } },
+        citations: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return NextResponse.json(messages);
+  } catch (err) {
+    console.error("Error fetching debate messages:", err);
+    return NextResponse.json(
+      { error: "Failed to fetch debate messages" },
       { status: 500 }
     );
   }
