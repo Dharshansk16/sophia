@@ -1,12 +1,25 @@
 "use client";
 import { useEffect, useState } from 'react';
-import BubbleMenu from './BubbleMenu';
+import BubbleMenu from '@/components/BubbleMenu';
+import { useAuth } from '@/context/AuthContext'; 
+import { useRouter } from 'next/navigation';
 
 const Navbar = () => {
+    const { user, signOut } = useAuth();
+    const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
-    const navItems = [
+    const handleSignOut = async () => {
+        try {
+            await signOut();
+            console.log("User signed out");
+        } catch (error) {
+            console.error("Error signing out:", error);
+        }
+    }
+
+    const getNavItems = () => [
         {
             label: 'Explore',
             href: '#explore',
@@ -33,23 +46,46 @@ const Navbar = () => {
             href: '#library',
             ariaLabel: 'Knowledge Library',
             rotation: 5,
-            hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.75)', textColor: '#ffffff' }
         },
-        {
-            label: 'Login',
-            href: '/login',
-            ariaLabel: 'User Login',
-            rotation: -3,
-            hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.95)', textColor: '#ffffff' }
-        },
-        {
-            label: 'Signup',
-            href: '/signup',
-            ariaLabel: 'User Signup',
-            rotation: 3,
-            hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.9)', textColor: '#ffffff' }
-        }
+        ...(user
+            ? [
+                {
+                    label: 'Profile',
+                    href: '/profile',
+                    ariaLabel: 'User Profile',
+                    rotation: -3,
+                    hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.95)', textColor: '#ffffff' }
+                },
+                {
+                    label: 'Logout',
+                    href: '#',
+                    onClick: handleSignOut,
+                    ariaLabel: 'User Logout',
+                    rotation: 3,
+                    hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.9)', textColor: '#ffffff' }
+                }
+            ]
+            : [
+                {
+                    label: 'Login',
+                    href: '#',
+                    onClick: () => { router.push('/auth/login'); },
+                    ariaLabel: 'User Login',
+                    rotation: -3,
+                    hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.95)', textColor: '#ffffff' }
+                },
+                {
+                    label: 'Signup',
+                    href: '#',
+                    onClick: () => { router.push('/auth/signup'); },
+                    ariaLabel: 'User Signup',
+                    rotation: 3,
+                    hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.9)', textColor: '#ffffff' }
+                }
+            ])
     ];
+
+    const navItems = getNavItems();
 
     // Sophia logo component
     const sophiaLogo = (

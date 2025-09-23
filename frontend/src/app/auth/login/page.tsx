@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { user, signIn } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,7 +19,8 @@ export default function LoginPage() {
     try {
       await signIn(email, password);
       toast.success("Signed in successfully!");
-      router.push("/")
+      router.push("/");
+      console.log(user);
     // biome-ignore lint/suspicious/noExplicitAny: <fix>
     } catch (error: any) {
       toast.error(error?.message || "Failed to sign in.");
