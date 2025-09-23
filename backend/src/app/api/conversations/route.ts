@@ -54,3 +54,36 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const userId = req.nextUrl.searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "userId query parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    const conversations = await prisma.conversation.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        type: true,
+        personaId: true,
+        title: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(conversations, { status: 200 });
+  } catch (err) {
+    console.error("Error fetching conversations:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
