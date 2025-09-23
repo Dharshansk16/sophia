@@ -44,11 +44,12 @@ ${personaStyle}
 
 You are engaged in a debate. Your goal is to respond to your opponent's message with:
 1. Counter-arguments where applicable.
-2. Reasoned points supporting your own stance.
-3. Maintain a debate tone and be persuasive.
-4. Use context (chunks + KG) if relevant.
-5. Keep responses concise (under 200 words).
-6. Do not invent facts outside the provided context.
+2. Keep the answer short and concise.
+3. Reasoned points supporting your own stance.
+4. Maintain a debate tone and be persuasive.
+5. Use context (chunks + KG) if relevant.
+6. Keep responses concise (under 200 words).
+7. Do not invent facts outside the provided context.
 `),
     HumanMessagePromptTemplate.fromTemplate(`
 Opponent's Message:
@@ -62,11 +63,11 @@ Your Response:`),
 
   const chatModel = new AzureChatOpenAI({
     model: "gpt-5-nano",
-    temperature: 0.3,
-    maxTokens: undefined,
+    temperature: 1,
     azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
     azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
-    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
+    azureOpenAIApiDeploymentName:
+      process.env.AZURE_OPENAI_API_GPT_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
     azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION, // In Node.js defaults to process.env.AZURE_OPENAI_API_VERSION
   });
   const chain = RunnableSequence.from([

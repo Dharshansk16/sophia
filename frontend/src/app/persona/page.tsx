@@ -1,31 +1,22 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { PersonaGallery } from "@/components/persona-gallery"
-import { ChatInterface } from "@/components/chat-interface"
-import { DebateInterface } from "@/components/debate-interface"
-import { Sidebar } from "@/components/sidebar"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Menu, X, Home } from "lucide-react"
-
-export type Persona = {
-  id: string
-  name: string
-  field: string
-  era: string
-  avatar: string
-  description: string
-  color: string
-}
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { PersonaGallery } from "@/components/persona-gallery";
+import { ChatInterface } from "@/components/chat-interface";
+import { DebateInterface } from "@/components/debate-interface";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Menu, X, Home } from "lucide-react";
+import { type Persona } from "@/lib/api";
 
 export type ChatMessage = {
-  id: string
-  content: string
-  sender: "user" | "persona"
-  timestamp: Date
-  citations?: string[]
-}
+  id: string;
+  content: string;
+  sender: "user" | "persona";
+  timestamp: Date;
+  citations?: string[];
+};
 
 function Header({
   currentView,
@@ -33,16 +24,16 @@ function Header({
   isDebateMode,
   toggleDebateMode,
 }: {
-  currentView: "gallery" | "chat" | "debate"
-  handleBackToGallery: () => void
-  isDebateMode: boolean
-  toggleDebateMode: () => void
+  currentView: "gallery" | "chat" | "debate";
+  handleBackToGallery: () => void;
+  isDebateMode: boolean;
+  toggleDebateMode: () => void;
 }) {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleHomeClick = () => {
-    router.push('/')
-  }
+    router.push("/");
+  };
 
   return (
     <header className="border-b border-white/20 bg-white/10 backdrop-blur-xl p-4 flex items-center justify-between rounded-t-xl">
@@ -92,10 +83,16 @@ function Header({
         </div>
       )}
     </header>
-  )
+  );
 }
 
-function MobileMenuButton({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boolean; setSidebarOpen: (open: boolean) => void }) {
+function MobileMenuButton({
+  sidebarOpen,
+  setSidebarOpen,
+}: {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}) {
   return (
     <Button
       variant="ghost"
@@ -106,41 +103,45 @@ function MobileMenuButton({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boolea
     >
       {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
     </Button>
-  )
+  );
 }
 
 export default function SophiaApp() {
-  const [currentView, setCurrentView] = useState<"gallery" | "chat" | "debate">("gallery")
-  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null)
-  const [debatePersonas, setDebatePersonas] = useState<[Persona | null, Persona | null]>([null, null])
-  const [isDebateMode, setIsDebateMode] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [currentView, setCurrentView] = useState<"gallery" | "chat" | "debate">(
+    "gallery"
+  );
+  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+  const [debatePersonas, setDebatePersonas] = useState<
+    [Persona | null, Persona | null]
+  >([null, null]);
+  const [isDebateMode, setIsDebateMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handlePersonaSelect = (persona: Persona) => {
     if (isDebateMode) {
       if (!debatePersonas[0]) {
-        setDebatePersonas([persona, null])
+        setDebatePersonas([persona, null]);
       } else if (!debatePersonas[1] && debatePersonas[0].id !== persona.id) {
-        setDebatePersonas([debatePersonas[0], persona])
-        setCurrentView("debate")
+        setDebatePersonas([debatePersonas[0], persona]);
+        setCurrentView("debate");
       }
     } else {
-      setSelectedPersona(persona)
-      setCurrentView("chat")
+      setSelectedPersona(persona);
+      setCurrentView("chat");
     }
-  }
+  };
 
   const handleBackToGallery = () => {
-    setCurrentView("gallery")
-    setSelectedPersona(null)
-    setDebatePersonas([null, null])
-  }
+    setCurrentView("gallery");
+    setSelectedPersona(null);
+    setDebatePersonas([null, null]);
+  };
 
   const toggleDebateMode = () => {
-    setIsDebateMode(!isDebateMode)
-    setDebatePersonas([null, null])
-    setCurrentView("gallery")
-  }
+    setIsDebateMode(!isDebateMode);
+    setDebatePersonas([null, null]);
+    setCurrentView("gallery");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#ece7df] via-[#d6cfc0] to-[#b8ab8f] relative overflow-hidden">
@@ -148,7 +149,10 @@ export default function SophiaApp() {
       <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('/parchment-texture.png')] bg-cover bg-center" />
       <div className="relative z-10 flex h-screen max-h-screen">
         {/* Mobile toggle */}
-        <MobileMenuButton sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <MobileMenuButton
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         {/* Sidebar */}
         <Sidebar
@@ -185,16 +189,21 @@ export default function SophiaApp() {
               </div>
             )}
 
-            {currentView === "debate" && debatePersonas[0] && debatePersonas[1] && (
-              <div className="h-full w-full flex items-center justify-center">
-                <div className="w-full max-w-4xl mx-auto bg-white/15 backdrop-blur-xl shadow-xl border border-white/20 rounded-2xl p-4 md:p-8">
-                  <DebateInterface personas={debatePersonas as [Persona, Persona]} />
+            {currentView === "debate" &&
+              debatePersonas[0] &&
+              debatePersonas[1] && (
+                <div className="h-full w-full flex items-center justify-center">
+                  <div className="w-full max-w-4xl mx-auto bg-white/15 backdrop-blur-xl shadow-xl border border-white/20 rounded-2xl p-4 md:p-8">
+                    <DebateInterface
+                      selectedPersonas={debatePersonas as [Persona, Persona]}
+                      onClose={() => setCurrentView("gallery")}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </section>
         </main>
       </div>
     </div>
-  )
+  );
 }

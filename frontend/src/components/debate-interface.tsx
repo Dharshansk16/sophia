@@ -1,319 +1,298 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Play, Square } from "lucide-react";
-import { debatesAPI, type Persona } from "@/lib/api";
+import { Loader2, Play, Square, Users } from "lucide-react";
+import { debatesAPI, conversationsAPI, type Persona } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { FormattedMessage } from "@/lib/message-formatter";
 
-interface ChatMessage {
+interface DebateMessage {
   id: string;
   content: string;
-  sender: "user" | "persona";
-  timestamp: Date;
-  citations?: string[];
-  personaIndex?: 0 | 1;
+  author: string;
+  personaId: string;
+  conversationId: string;
+  createdAt: string;
 }
 
 interface DebateInterfaceProps {
-  personas: [Persona, Persona];
+  selectedPersonas: Persona[];
+  onClose: () => void;
 }
 
-export function DebateInterface({ personas }: DebateInterfaceProps) {
+export function DebateInterface({
+  selectedPersonas,
+  onClose,
+}: DebateInterfaceProps) {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [isDebateActive, setIsDebateActive] = useState(false);
-  const [debateTopic, setDebateTopic] = useState("");
-  const [debateId, setDebateId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastPersonaIndex, setLastPersonaIndex] = useState<0 | 1>(1); // start with 1 so first reply is persona[0]
+  const [topic, setTopic] = useState("");
+  const [isStarting, setIsStarting] = useState(false);
+  const [isDebating, setIsDebating] = useState(false);
+  const [messages, setMessages] = useState<DebateMessage[]>([]);
+  const [currentDebateId, setCurrentDebateId] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [currentPersona, setCurrentPersona] = useState<string>("");
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Add message to state
+  const addMessage = (message: DebateMessage) => {
+    setMessages((prev) => [...prev, message]);
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  // Get persona by ID
+  const getPersonaById = (id: string) => {
+    return selectedPersonas.find((p) => p.id === id);
+  };
 
+  // Get persona color
+  const getPersonaColor = (personaId: string) => {
+    const persona = getPersonaById(personaId);
+    return persona?.color || "#6366f1";
+  };
+
+  // Start debate
   const startDebate = async () => {
-    if (!debateTopic.trim() || !user) {
-      toast.error("Please enter a debate topic and ensure you're logged in");
+    if (!topic.trim()) {
+      toast.error("Please enter a debate topic");
       return;
     }
 
-    setIsLoading(true);
-    try {
-      // ------------------ FIX HERE ------------------
-      // Pass just an array of persona IDs
-      const participantIds = [personas[0].id, personas[1].id];
+    if (selectedPersonas.length < 2) {
+      toast.error("Please select at least 2 personas for the debate");
+      return;
+    }
 
-      const debate = await debatesAPI.create(
-        debateTopic,
-        participantIds, // backend now expects array of strings
+    if (!user) {
+      toast.error("Please log in to start a debate");
+      return;
+    }
+
+    try {
+      setIsStarting(true);
+      setMessages([]);
+
+      // Create debate
+      const response = await debatesAPI.create(
+        topic.trim(),
+        selectedPersonas.map((p) => p.id),
         user.id
       );
-      setDebateId(debate.id);
-      setIsDebateActive(true);
 
-      // Initial system message
-      const initialMessage: ChatMessage = {
-        id: "init-1",
-        content: `Welcome to this debate between ${personas[0].name} and ${personas[1].name} on the topic: "${debateTopic}". Let's begin.`,
-        sender: "user",
-        timestamp: new Date(),
-      };
-      setMessages([initialMessage]);
+      setCurrentDebateId(response.id);
+      setIsDebating(true);
+      setTopic("");
 
-      // Kickoff debate
-      const startingPrompt = `Begin a debate on the topic: "${debateTopic}". ${personas[0].name}, please present your opening statement. ${personas[1].name} will respond next.`;
+      // Start automatic debate continuation
+      setTimeout(() => continueDebate(response.id), 1000);
 
-      const response = await debatesAPI.sendMessage(debate.id, startingPrompt);
-
-      if (response.aiMessage) {
-        const aiMessage: ChatMessage = {
-          id: response.aiMessage.id || `ai-${Date.now()}`,
-          content: response.aiMessage.content,
-          sender: "persona",
-          timestamp: new Date(response.aiMessage.createdAt || Date.now()),
-          personaIndex: 0,
-        };
-        setMessages((prev) => [...prev, aiMessage]);
-        setLastPersonaIndex(0);
-      }
-    } catch (error) {
-      console.error("Failed to create debate:", error);
-      toast.error("Failed to start debate");
+      toast.success("Debate started! Personas will now debate automatically.");
+    } catch (error: any) {
+      console.error("Error starting debate:", error);
+      toast.error(error.response?.data?.error || "Failed to start debate");
     } finally {
-      setIsLoading(false);
+      setIsStarting(false);
     }
   };
 
-  const stopDebate = () => {
-    setIsDebateActive(false);
-    setDebateId(null);
-  };
-
-  const handleUserInput = async () => {
-    if (!inputValue.trim() || !debateId || !user) return;
-
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      content: inputValue,
-      sender: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    const messageToSend = inputValue;
-    setInputValue("");
+  // Continue debate automatically
+  const continueDebate = async (debateId: string) => {
+    if (!isDebating) return;
 
     try {
-      const response = await debatesAPI.sendMessage(debateId, messageToSend);
+      setIsTyping(true);
 
-      if (response.aiMessage) {
-        // Alternate persona
-        const nextPersonaIndex: 0 | 1 = lastPersonaIndex === 0 ? 1 : 0;
+      // Send message to trigger next persona response
+      const response = await debatesAPI.sendMessage(debateId, "continue");
 
-        const aiMessage: ChatMessage = {
-          id: response.aiMessage.id || `ai-${Date.now()}`,
-          content: response.aiMessage.content,
-          sender: "persona",
-          timestamp: new Date(response.aiMessage.createdAt || Date.now()),
-          personaIndex: nextPersonaIndex,
+      if (response.data?.message) {
+        const newMessage: DebateMessage = {
+          id: response.data.message.id || Date.now().toString(),
+          content: response.data.message.content,
+          author: response.data.message.author,
+          personaId: response.data.message.personaId,
+          conversationId: response.data.message.conversationId,
+          createdAt:
+            response.data.message.createdAt || new Date().toISOString(),
         };
-        setMessages((prev) => [...prev, aiMessage]);
-        setLastPersonaIndex(nextPersonaIndex);
+
+        addMessage(newMessage);
+        setCurrentPersona(newMessage.author);
+
+        // Continue debate after a delay if still active
+        if (isDebating) {
+          setTimeout(() => continueDebate(debateId), 3000);
+        }
       }
-    } catch (error) {
-      console.error("Failed to send user message:", error);
-      toast.error("Failed to send message");
+    } catch (error: any) {
+      console.error("Error continuing debate:", error);
+      if (error.response?.status !== 404) {
+        toast.error("Error in debate continuation");
+      }
+    } finally {
+      setIsTyping(false);
     }
   };
 
-  // Auth check
-  if (!user) {
-    return (
-      <div className="flex flex-col h-full items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <h3 className="font-bold text-lg mb-2">Authentication Required</h3>
-            <p className="text-muted-foreground mb-4">
-              Please log in to start a debate between {personas[0].name} and{" "}
-              {personas[1].name}
-            </p>
-            <Button onClick={() => (window.location.href = "/auth/login")}>
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Stop debate
+  const stopDebate = () => {
+    setIsDebating(false);
+    setCurrentDebateId(null);
+    setIsTyping(false);
+    setCurrentPersona("");
+    toast.success("Debate stopped");
+  };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50 backdrop-blur-sm p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold font-[family-name:var(--font-playfair)] text-xl">
-            Historical Debate
-          </h3>
-          <div className="flex items-center gap-2">
-            {!isDebateActive ? (
+    <div className="h-full flex flex-col">
+      <Card className="flex-1 flex flex-col">
+        <CardHeader className="border-b">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Debate Arena
+            </CardTitle>
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+
+          {/* Show selected personas */}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {selectedPersonas.map((persona) => (
+              <Badge
+                key={persona.id}
+                variant="secondary"
+                style={{
+                  backgroundColor: `${persona.color}20`,
+                  borderColor: persona.color,
+                }}
+              >
+                {persona.name}
+              </Badge>
+            ))}
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex-1 flex flex-col p-4">
+          {!isDebating ? (
+            /* Topic Input */
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Enter Debate Topic
+                </label>
+                <Input
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="e.g., Should artificial intelligence be regulated by governments?"
+                  className="w-full"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isStarting) {
+                      startDebate();
+                    }
+                  }}
+                />
+              </div>
+
               <Button
                 onClick={startDebate}
-                disabled={!debateTopic.trim() || isLoading}
-                size="sm"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                {isLoading ? "Starting..." : "Start Debate"}
-              </Button>
-            ) : (
-              <Button onClick={stopDebate} variant="destructive" size="sm">
-                <Square className="h-4 w-4 mr-2" />
-                Stop Debate
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {!isDebateActive && messages.length === 0 && (
-          <div className="mb-4">
-            <Input
-              value={debateTopic}
-              onChange={(e) => setDebateTopic(e.target.value)}
-              placeholder="Enter a debate topic (e.g., 'The nature of time and space')"
-              className="bg-background/80 border-2 border-border"
-              disabled={isLoading}
-            />
-          </div>
-        )}
-
-        {/* Avatars */}
-        <div className="flex items-center justify-center gap-8">
-          {[0, 1].map((i) => (
-            <div key={i} className="text-center">
-              <img
-                src={personas[i].avatar || "/placeholder.svg"}
-                alt={personas[i].name}
-                className="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-border"
-              />
-              <h4 className="font-semibold text-sm">{personas[i].name}</h4>
-              <Badge variant="secondary" className="text-xs mt-1">
-                {personas[i].field || "Knowledge"}
-              </Badge>
-            </div>
-          ))}
-          <div className="text-3xl font-bold text-primary animate-pulse">
-            VS
-          </div>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => {
-          const isPersona0 =
-            message.sender === "persona" && message.personaIndex === 0;
-          const isPersona1 =
-            message.sender === "persona" && message.personaIndex === 1;
-
-          return (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.sender === "user"
-                  ? "justify-center"
-                  : isPersona0
-                  ? "justify-start"
-                  : "justify-end"
-              }`}
-            >
-              <Card
-                className={`max-w-[80%] scroll-unfurl ${
-                  message.sender === "user"
-                    ? "bg-accent text-accent-foreground border-2 border-accent"
-                    : isPersona0
-                    ? "bg-card border-2 border-primary/30 shadow-md"
-                    : "bg-secondary border-2 border-accent/30 shadow-md"
-                }`}
-              >
-                <CardContent className="p-4">
-                  {message.sender === "persona" && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <img
-                        src={
-                          isPersona0 ? personas[0].avatar : personas[1].avatar
-                        }
-                        alt={isPersona0 ? personas[0].name : personas[1].name}
-                        className="w-6 h-6 rounded-full"
-                      />
-                      <span className="font-semibold text-sm">
-                        {isPersona0 ? personas[0].name : personas[1].name}
-                      </span>
-                    </div>
-                  )}
-
-                  <div
-                    className={`leading-relaxed ${
-                      message.sender === "persona" ? "typewriter" : ""
-                    }`}
-                  >
-                    {message.sender === "persona" ? (
-                      <FormattedMessage content={message.content} />
-                    ) : (
-                      <div className="text-sm">{message.content}</div>
-                    )}
-                  </div>
-
-                  <div className="text-xs opacity-70 mt-2">
-                    {message.timestamp.toLocaleTimeString()}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          );
-        })}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="border-t border-border bg-card/50 backdrop-blur-sm p-4">
-        <div className="flex items-center gap-2 max-w-4xl mx-auto">
-          <div className="flex-1">
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleUserInput();
+                disabled={
+                  isStarting || !topic.trim() || selectedPersonas.length < 2
                 }
-              }}
-              placeholder="Interject with your own thoughts or questions..."
-              className="bg-background/80 border-2 border-border focus:border-primary transition-colors"
-              disabled={isLoading || !isDebateActive}
-            />
-          </div>
-          <Button
-            onClick={handleUserInput}
-            disabled={!inputValue.trim() || isLoading || !isDebateActive}
-            className="quill-write"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+                className="w-full"
+              >
+                {isStarting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Starting Debate...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-4 w-4" />
+                    Start Debate
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            /* Active Debate */
+            <div className="flex-1 flex flex-col">
+              {/* Debate Controls */}
+              <div className="flex items-center justify-between mb-4 p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-sm font-medium">Debate Active</span>
+                  {isTyping && currentPersona && (
+                    <span className="text-xs text-muted-foreground">
+                      {currentPersona} is typing...
+                    </span>
+                  )}
+                </div>
+                <Button variant="destructive" size="sm" onClick={stopDebate}>
+                  <Square className="mr-2 h-4 w-4" />
+                  Stop Debate
+                </Button>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                {messages.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    Debate will start automatically...
+                  </div>
+                ) : (
+                  messages.map((message) => {
+                    const persona = getPersonaById(message.personaId);
+                    return (
+                      <div
+                        key={message.id}
+                        className="p-4 rounded-lg border-l-4"
+                        style={{
+                          borderLeftColor: getPersonaColor(message.personaId),
+                          backgroundColor: `${getPersonaColor(
+                            message.personaId
+                          )}08`,
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge
+                            variant="secondary"
+                            style={{
+                              backgroundColor: getPersonaColor(
+                                message.personaId
+                              ),
+                              color: "white",
+                            }}
+                          >
+                            {persona?.name || message.author}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(message.createdAt).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed">
+                          {message.content}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+
+                {/* Typing indicator */}
+                {isTyping && (
+                  <div className="flex items-center gap-2 p-4 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Generating response...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
