@@ -1,6 +1,6 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { z } from "zod";
 import pLimit from "p-limit";
+import { AzureChatOpenAI } from "@langchain/openai";
 
 // ---------- TYPES ----------
 export type Triplet = {
@@ -32,12 +32,15 @@ export async function extractTripletsWithGemini(
   });
 
   // Initialize model
-  const chatModel = new ChatGoogleGenerativeAI({
-    apiKey: process.env.GOOGLE_API_KEY,
-    model: "gemini-2.5-flash",
+  const llm = new AzureChatOpenAI({
+    model: "gpt-5-nano",
     temperature: 0,
-  }).withStructuredOutput(schema);
-
+    maxTokens: undefined,
+    azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY, // In Node.js defaults to process.env.AZURE_OPENAI_API_KEY
+    azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_INSTANCE_NAME
+    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
+    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION, // In Node.js defaults to process.env.AZURE_OPENAI_API_VERSION
+  });
   // Split texts into batches
   const batches: string[][] = [];
   for (let i = 0; i < texts.length; i += batchSize) {
@@ -71,7 +74,7 @@ Text:
 """${combined}"""
 `;
 
-          const response = await chatModel.invoke(prompt);
+          const response = await llm.invoke(prompt);
 
           // Post-process to replace empty or generic predicates
           const cleanedTriplets = response.triplets.map((t: Triplet) => ({
