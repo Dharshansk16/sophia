@@ -37,10 +37,17 @@ const Navbar = () => {
         },
         {
             label: 'Login',
-            href: '#login',
+            href: '/login',
             ariaLabel: 'User Login',
             rotation: -3,
             hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.95)', textColor: '#ffffff' }
+        },
+        {
+            label: 'Signup',
+            href: '/signup',
+            ariaLabel: 'User Signup',
+            rotation: 3,
+            hoverStyles: { bgColor: 'rgba(0, 0, 0, 0.9)', textColor: '#ffffff' }
         }
     ];
 
