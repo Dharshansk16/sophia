@@ -82,17 +82,17 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-full">
       {/* Chat header */}
-      <div className="border-b border-border bg-card/50 backdrop-blur-sm p-4 flex items-center gap-4">
+      <div className="border-b border-border bg-card/50 backdrop-blur-sm p-3 md:p-4 flex items-center gap-4 flex-shrink-0">
         <img
           src={persona.avatar || "/placeholder.svg"}
           alt={persona.name}
-          className="w-12 h-12 rounded-full border-2 border-border"
+          className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-border"
         />
-        <div>
-          <h3 className="font-bold font-[family-name:var(--font-playfair)] text-lg">{persona.name}</h3>
-          <div className="flex gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold font-[family-name:var(--font-playfair)] text-base md:text-lg truncate">{persona.name}</h3>
+          <div className="flex gap-2 flex-wrap">
             <Badge variant="secondary" className="text-xs">
               {persona.field}
             </Badge>
@@ -104,18 +104,18 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 min-h-0">
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
             <Card
-              className={`max-w-[80%] scroll-unfurl ${
+              className={`w-fit ${
                 message.sender === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card border-2 border-border shadow-md"
+                  ? "max-w-[75%] md:max-w-[60%] bg-primary text-primary-foreground"
+                  : "max-w-[85%] md:max-w-[75%] bg-card border-2 border-border shadow-md"
               }`}
             >
-              <CardContent className="p-4">
-                <div className={`text-sm leading-relaxed ${message.sender === "persona" ? "typewriter" : ""}`}>
+              <CardContent className={`${message.sender === "user" ? "p-2 md:p-3" : "p-3 md:p-4"}`}>
+                <div className={`text-sm leading-relaxed break-words ${message.sender === "persona" ? "typewriter" : ""}`}>
                   {message.content}
                 </div>
 
@@ -138,7 +138,7 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
         {isTyping && (
           <div className="flex justify-start">
             <Card className="bg-card border-2 border-border">
-              <CardContent className="p-4">
+              <CardContent className="p-3 md:p-4">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
@@ -162,27 +162,27 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
       </div>
 
       {/* Input area */}
-      <div className="border-t border-border bg-card/50 backdrop-blur-sm p-4">
-        <div className="flex items-center gap-2 max-w-4xl mx-auto">
+      <div className="border-t border-border bg-card/50 backdrop-blur-sm p-3 md:p-4 flex-shrink-0">
+        <div className="flex items-center gap-2 w-full">
           <div className="flex-1 relative">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Share your thoughts with this great mind..."
-              className="pr-20 bg-background/80 border-2 border-border focus:border-primary transition-colors"
+              className="pr-16 md:pr-20 bg-background/80 border-2 border-border focus:border-primary transition-colors text-sm md:text-base"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                <Paperclip className="h-4 w-4" />
+              <Button size="sm" variant="ghost" className="h-6 w-6 md:h-8 md:w-8 p-0">
+                <Paperclip className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                <Mic className="h-4 w-4" />
+              <Button size="sm" variant="ghost" className="h-6 w-6 md:h-8 md:w-8 p-0">
+                <Mic className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
             </div>
           </div>
-          <Button onClick={handleSendMessage} disabled={!inputValue.trim()} className="quill-write">
-            <Send className="h-4 w-4" />
+          <Button onClick={handleSendMessage} disabled={!inputValue.trim()} className="quill-write flex-shrink-0">
+            <Send className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
         </div>
       </div>

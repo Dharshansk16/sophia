@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { PersonaGallery } from "@/components/persona-gallery"
 import { ChatInterface } from "@/components/chat-interface"
 import { DebateInterface } from "@/components/debate-interface"
 import { Sidebar } from "@/components/sidebar"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Menu, X } from "lucide-react"
+import { ArrowLeft, Menu, X, Home } from "lucide-react"
 
 export type Persona = {
   id: string
@@ -37,9 +38,26 @@ function Header({
   isDebateMode: boolean
   toggleDebateMode: () => void
 }) {
+  const router = useRouter()
+
+  const handleHomeClick = () => {
+    router.push('/')
+  }
+
   return (
     <header className="border-b border-white/20 bg-white/10 backdrop-blur-xl p-4 flex items-center justify-between rounded-t-xl">
       <div className="flex items-center gap-4">
+        {currentView === "gallery" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleHomeClick}
+            className="flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md"
+          >
+            <Home className="h-4 w-4" />
+            Home
+          </Button>
+        )}
         {currentView !== "gallery" && (
           <Button
             variant="ghost"
@@ -160,8 +178,8 @@ export default function SophiaApp() {
             )}
 
             {currentView === "chat" && selectedPersona && (
-              <div className="h-full w-full flex items-center justify-center">
-                <div className="w-full max-w-2xl mx-auto bg-white/15 backdrop-blur-xl shadow-xl border border-white/20 rounded-2xl p-4 md:p-8">
+              <div className="h-full w-full">
+                <div className="h-full w-full max-w-6xl mx-auto bg-white/15 backdrop-blur-xl shadow-xl border border-white/20 rounded-2xl overflow-hidden">
                   <ChatInterface persona={selectedPersona} />
                 </div>
               </div>
