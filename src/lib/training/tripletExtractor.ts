@@ -92,10 +92,7 @@ Text:
             } triplets)`
           );
         } catch (err) {
-          console.warn(
-            `⚠️ Triplet extraction failed for batch ${idx + 1}:`,
-            err
-          );
+          console.warn(`Triplet extraction failed for batch ${idx + 1}:`, err);
         }
       })
     )
