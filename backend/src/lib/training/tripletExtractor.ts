@@ -34,13 +34,14 @@ export async function extractTripletsWithGemini(
   // Initialize model
   const llm = new AzureChatOpenAI({
     model: "gpt-5-nano",
-    temperature: 0,
-    maxTokens: undefined,
+    temperature: 1,
     azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
     azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
-    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_GPT_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
-    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION, // In Node.js defaults to process.env.AZURE_OPENAI_API_VERSION
+    azureOpenAIApiDeploymentName:
+      process.env.AZURE_OPENAI_API_GPT_DEPLOYMENT_NAME,
+    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION,
   });
+
   // Split texts into batches
   const batches: string[][] = [];
   for (let i = 0; i < texts.length; i += batchSize) {
@@ -60,14 +61,22 @@ export async function extractTripletsWithGemini(
 
           const prompt = `
 Extract short, meaningful subject-predicate-object (S-P-O) triplets from the following text.
+
+ IMPORTANT: Output ONLY valid JSON in this format:
+{
+  "triplets": [
+    { "subject": "Entity1", "predicate": "relation", "object": "Entity2" },
+    { "subject": "Entity3", "predicate": "relation", "object": "Entity4" }
+  ]
+}
+
 Rules:
-1. Only include factual, significant relationships conveying real information.
-2. Avoid generic, trivial, or obvious predicates like "is", "has", "does", or "relationship".
-3. Keep each subject, predicate, and object concise (1–5 words if possible).
-4. Prefer proper nouns, named entities, or technical terms as subjects and objects.
-5. Infer meaningful predicates even if none is explicitly present.
-6. Avoid duplicates or repeated concepts.
-7. Focus on relationships that matter for knowledge representation.
+1. Only include factual, significant relationships.
+2. Avoid trivial predicates like "is", "has", "does".
+3. Keep each field concise (1–5 words).
+4. Prefer proper nouns or technical terms.
+5. No duplicates.
+6. Do NOT include explanations, only JSON.
 
 Persona ID: ${personaId ?? "none"}
 Text:
@@ -76,24 +85,42 @@ Text:
 
           const response = await llm.invoke(prompt);
 
-          // Parse and validate response content
           let triplets: Triplet[] = [];
+
           try {
+            // Try parsing as JSON
             const parsed = schema.safeParse(
               typeof response.content === "string"
                 ? JSON.parse(response.content)
                 : response.content
             );
+
             if (parsed.success) {
               triplets = parsed.data.triplets;
             } else {
               console.warn("Triplet schema validation failed:", parsed.error);
+
+              // Fallback: parse free-text "A - B - C"
+              const rawText =
+                typeof response.content === "string"
+                  ? response.content
+                  : JSON.stringify(response.content);
+
+              triplets = rawText
+                .split("\n")
+                .map((line) => line.split("-").map((s) => s.trim()))
+                .filter((parts) => parts.length === 3)
+                .map(([subject, predicate, object]) => ({
+                  subject,
+                  predicate,
+                  object,
+                }));
             }
           } catch (e) {
             console.warn("Failed to parse triplet response:", e);
           }
 
-          // Post-process to replace empty or generic predicates
+          // Post-process cleanup
           const cleanedTriplets = triplets.map((t: Triplet) => ({
             subject: t.subject.trim(),
             predicate:

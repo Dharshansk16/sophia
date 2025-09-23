@@ -70,11 +70,12 @@ Retrieved Context:
   // --- 3. Initialize ChatGoogleGenerativeAI ---
   const chatModel = new AzureChatOpenAI({
     model: "gpt-5-nano",
-    temperature: 0.2,
+    temperature: 1,
     maxTokens: undefined,
     azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
     azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
-    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
+    azureOpenAIApiDeploymentName:
+      process.env.AZURE_OPENAI_API_GPT_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
     azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION, // In Node.js defaults to process.env.AZURE_OPENAI_API_VERSION
   });
 
