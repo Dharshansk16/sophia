@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,14 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Upload, X } from "lucide-react"
 
+interface Persona {
+  id: string
+  name: string
+  slug: string
+  shortBio?: string
+  imageUrl?: string
+}
+
 interface UploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -27,9 +35,29 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [personas, setPersonas] = useState<Persona[]>([])
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
   const { data: session } = useSession()
+
+  // Fetch personas on component mount
+  useEffect(() => {
+    const fetchPersonas = async () => {
+      try {
+        const response = await fetch("/api/personas")
+        if (response.ok) {
+          const data = await response.json()
+          setPersonas(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch personas:", error)
+      }
+    }
+    if (open) {
+      fetchPersonas()
+    }
+  }, [open])
 
   const handleFileSelect = (files: FileList | null) => {
     if (files) setSelectedFiles((prev) => [...prev, ...Array.from(files)])
@@ -74,6 +102,10 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
       for (const file of selectedFiles) {
         const formData = new FormData()
         formData.append("file", file)
+        formData.append("userId", session.user.id)
+        if (selectedPersonaId) {
+          formData.append("personaId", selectedPersonaId)
+        }
 
         const response = await fetch("/api/uploads", {
           method: "POST",
@@ -91,6 +123,7 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
       })
 
       setSelectedFiles([])
+      setSelectedPersonaId("")
       onSuccess()
     } catch (error) {
       toast({
@@ -145,6 +178,24 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
                   onChange={(e) => handleFileSelect(e.target.files)}
                 />
               </div>
+            </div>
+
+            {/* Persona selection */}
+            <div className="space-y-2">
+              <Label htmlFor="persona-select">Persona (Optional)</Label>
+              <select
+                id="persona-select"
+                value={selectedPersonaId}
+                onChange={(e) => setSelectedPersonaId(e.target.value)}
+                className="w-full p-2 border border-border rounded-md bg-background text-foreground"
+              >
+                <option value="">No persona (general upload)</option>
+                {personas.map((persona) => (
+                  <option key={persona.id} value={persona.id}>
+                    {persona.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Selected files */}

@@ -14,17 +14,11 @@ import { Upload, Eye, Trash2, Download } from "lucide-react"
 interface UploadFile {
   id: string
   filename: string
-  originalName: string
-  size: number
-  mimeType: string
-  uploadedAt: string
-  url: string
-  metadata?: {
-    width?: number
-    height?: number
-    duration?: number
-    [key: string]: any
-  }
+  url?: string
+  uploadedById: string
+  personaId?: string
+  createdAt: string
+  deletedAt?: string
 }
 
 export function UploadsContent() {
@@ -106,35 +100,20 @@ export function UploadsContent() {
     setSelectedUpload(upload)
     setMetadataDialogOpen(true)
   }
-  const handleDownload = (upload: UploadFile) => window.open(upload.url, "_blank")
+  const handleDownload = (upload: UploadFile) => {
+    if (upload.url) {
+      window.open(upload.url, "_blank")
+    } else {
+      toast({
+        title: "Error",
+        description: "No download URL available for this file",
+        variant: "destructive",
+      })
+    }
+  }
   const handleUploadSuccess = () => {
     fetchUploads()
     setUploadDialogOpen(false)
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  }
-
-  const getFileTypeVariant = (mimeType: string) => {
-    if (mimeType.startsWith("image/")) return "default"
-    if (mimeType.startsWith("video/")) return "secondary"
-    if (mimeType.startsWith("audio/")) return "outline"
-    if (mimeType.includes("pdf")) return "destructive"
-    return "secondary"
-  }
-
-  const getFileTypeLabel = (mimeType: string) => {
-    if (mimeType.startsWith("image/")) return "Image"
-    if (mimeType.startsWith("video/")) return "Video"
-    if (mimeType.startsWith("audio/")) return "Audio"
-    if (mimeType.includes("pdf")) return "PDF"
-    if (mimeType.includes("text/")) return "Text"
-    return "File"
   }
 
   useEffect(() => {
@@ -180,12 +159,12 @@ export function UploadsContent() {
               <TableBody>
                 {uploads.map((upload) => (
                   <TableRow key={upload.id}>
-                    <TableCell className="font-medium max-w-xs truncate">{upload.originalName}</TableCell>
+                    <TableCell className="font-medium max-w-xs truncate">{upload.filename}</TableCell>
                     <TableCell>
-                      <Badge variant={getFileTypeVariant(upload.mimeType)}>{getFileTypeLabel(upload.mimeType)}</Badge>
+                      <Badge variant="secondary">File</Badge>
                     </TableCell>
-                    <TableCell>{formatFileSize(upload.size)}</TableCell>
-                    <TableCell>{new Date(upload.uploadedAt).toLocaleDateString()}</TableCell>
+                    <TableCell>Unknown size</TableCell>
+                    <TableCell>{new Date(upload.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Button variant="ghost" size="sm" onClick={() => handleViewMetadata(upload)}>
