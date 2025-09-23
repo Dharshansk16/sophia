@@ -87,7 +87,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
         if (!isValid) throw new Error("Invalid credentials");
 
         return {
@@ -105,12 +108,12 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
     DiscordProvider({
-        clientId: process.env.DISCORD_CLIENT_ID ?? "",
-        clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
+      clientId: process.env.DISCORD_CLIENT_ID ?? "",
+      clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
     }),
     GitHubProvider({
-        clientId: process.env.GITHUB_CLIENT_ID ?? "",
-        clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      clientId: process.env.GITHUB_CLIENT_ID ?? "",
+      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
     }),
   ],
 
@@ -138,7 +141,10 @@ export const authOptions: NextAuthOptions = {
       }
 
       // If access token still valid, return it
-      if (token.accessTokenExpires && now < (token.accessTokenExpires as number)) {
+      if (
+        token.accessTokenExpires &&
+        now < (token.accessTokenExpires as number)
+      ) {
         return token;
       }
 
