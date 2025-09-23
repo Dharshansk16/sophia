@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import axios from "axios";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -20,27 +21,20 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(
+      const res = await axios.post(
         `${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/signUp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password }),
-        }
+        { name, email, password },
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.error || "Signup failed");
-        setLoading(false);
-        return;
+      if (res.status === 200) {
+        toast.success("Registration successful!");
       }
-
-      toast.success("Registration successful!");
-      // Optionally redirect or clear form here
-    } catch (err) {
-      toast.error(`Something went wrong ${err}`);
+    // biome-ignore lint/suspicious/noExplicitAny: <fix>
+          } catch (err: any) {
+      toast.error(
+        err.response?.data?.error || `Something went wrong ${err.message}`
+      );
     } finally {
       setLoading(false);
     }
@@ -159,9 +153,7 @@ export default function SignupPage() {
               whileTap={{ scale: loading ? 1 : 0.98 }}
               disabled={loading}
             >
-              {loading ? (
-                <span className="loader mr-2" />
-              ) : null}
+              {loading ? <span className="loader mr-2" /> : null}
               {loading ? "Creating..." : "Create Account"}
             </motion.button>
           </motion.form>
@@ -197,8 +189,12 @@ export default function SignupPage() {
           display: inline-block;
         }
         @keyframes spin {
-          0% { transform: rotate(0deg);}
-          100% { transform: rotate(360deg);}
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </div>
