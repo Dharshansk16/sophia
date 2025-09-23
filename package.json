@@ -10,6 +10,7 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@azure/storage-blob": "^12.28.0",
     "@prisma/client": "^6.16.2",
     "next": "15.5.3",
     "react": "19.1.0",
