@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import uploadToAzureBlob from "@/lib/azure/uploadToAzureBlog";
+import { trainPdfHybridNeo4j } from "@/lib/training/training";
 
 //upload pdf and store in azure and save meta data in prisma
 export async function POST(req: NextRequest) {
@@ -42,7 +43,13 @@ export async function POST(req: NextRequest) {
     });
 
     //start training
-    //TODO : training data
+    trainPdfHybridNeo4j(file, uploadRecord.id, personaId, url)
+      .then(() => {
+        console.log("Training finished for upload:", uploadRecord.id);
+      })
+      .catch((err) => {
+        console.error("Training failed for upload:", uploadRecord.id, err);
+      });
 
     return NextResponse.json(uploadRecord, { status: 201 });
   } catch (error) {

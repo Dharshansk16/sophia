@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { fetchContextForAI } from "@/lib/FetchContextForAI/context-for-ai";
-import callAI from "@/lib/callAI";
+import { fetchContextForAI } from "@/lib/context/llm-context";
 
 type RequestBody = {
   content: string;
@@ -61,22 +60,23 @@ export async function POST(
     conversation.personaId ?? ""
   );
 
-  const aiContent = await callAI({
-    prompt: content,
-    context: contextData.llmContext,
-    personaId: conversation.personaId,
-  });
-  console.log("AI Response:", aiContent.answer);
+  //TODO
+  // const aiContent = await callAI({
+  //   prompt: content,
+  //   context: contextData.llmContext,
+  //   personaId: conversation.personaId,
+  // });
+  // console.log("AI Response:", aiContent.answer);
   // --- Save AI message ---
-  const aiMessage = await prisma.message.create({
-    data: {
-      conversationId,
-      content: aiContent.answer,
-      authorUserId: null,
-      authorPersonaId: conversation.personaId,
-    },
-    select: { id: true, content: true, authorPersonaId: true, createdAt: true },
-  });
+  // const aiMessage = await prisma.message.create({
+  //   data: {
+  //     conversationId,
+  //     content: aiContent.answer,
+  //     authorUserId: null,
+  //     authorPersonaId: conversation.personaId,
+  //   },
+  //   select: { id: true, content: true, authorPersonaId: true, createdAt: true },
+  // });
   // --- Return both messages ---
-  return NextResponse.json({ userMessage, aiMessage }, { status: 201 });
+  return NextResponse.json({ userMessage }, { status: 201 });
 }
