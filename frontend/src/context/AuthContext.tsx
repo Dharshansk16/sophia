@@ -35,21 +35,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("accessToken");
+    const storedExpiry = localStorage.getItem("accessTokenExpires");
+
+    if (!storedUser || !storedToken || !storedExpiry) {
+      return;
+    }
+
+    if (Math.floor(Date.now() / 1000) >= Number(storedExpiry)) {
+      console.log("Access token expired, refreshing...");
+      refreshToken().catch(() => signOut());
+    } else {
+      setUser(JSON.parse(storedUser));
+      setAccessToken(storedToken);
+    }
+  }, []);
+
   const signIn = async (email: string, password: string) => {
-    const { data } = await api.post("/auth/client/login", { email, password });
+    const { data } = await api.post("/api/auth/client/login", {
+      email,
+      password,
+    });
 
     setUser(data.user);
     setAccessToken(data.accessToken);
+    console.log(data);
 
     localStorage.setItem("user", JSON.stringify(data.user));
     localStorage.setItem("accessToken", data.accessToken);
     localStorage.setItem("refreshToken", data.refreshToken);
-    localStorage.setItem("accessTokenExpiry", data.accessTokenExpiry.toString());
+    localStorage.setItem(
+      "accessTokenExpires",
+      data.accessTokenExpires.toString()
+    );
   };
 
   const signOut = async () => {
     try {
-      await api.post("/auth/client/signout"); // hits SERVER URL
+      await api.post("/api/auth/client/signOut");
     } catch {
       // ignore
     }
@@ -65,17 +90,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    const { data } = await api.post("/auth/client/refresh", {
+    const { data } = await api.post("/api/auth/client/refresh", {
       refreshToken: storedRefreshToken,
     });
 
     setAccessToken(data.accessToken);
     localStorage.setItem("accessToken", data.accessToken);
-    localStorage.setItem("accessTokenExpiry", data.accessTokenExpiry.toString());
+    localStorage.setItem(
+      "accessTokenExpires",
+      data.accessTokenExpires.toString()
+    );
   };
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, signIn, signOut, refreshToken }}>
+    <AuthContext.Provider
+      value={{ user, accessToken, signIn, signOut, refreshToken }}
+    >
       {children}
     </AuthContext.Provider>
   );
