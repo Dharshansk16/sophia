@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { AzureChatOpenAI } from "@langchain/openai";
 import {
   ChatPromptTemplate,
   SystemMessagePromptTemplate,
@@ -68,11 +68,14 @@ Retrieved Context:
   ]);
 
   // --- 3. Initialize ChatGoogleGenerativeAI ---
-  const chatModel = new ChatGoogleGenerativeAI({
-    apiKey: process.env.GOOGLE_API_KEY,
-    model: "gemini-2.5-flash",
-    temperature: 0.3,
-    maxOutputTokens: 2000,
+  const chatModel = new AzureChatOpenAI({
+    model: "gpt-5-nano",
+    temperature: 0.2,
+    maxTokens: undefined,
+    azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
+    azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
+    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
+    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION, // In Node.js defaults to process.env.AZURE_OPENAI_API_VERSION
   });
 
   // --- 4. Build RunnableSequence ---

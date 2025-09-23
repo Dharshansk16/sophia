@@ -38,7 +38,7 @@ export async function extractTripletsWithGemini(
     maxTokens: undefined,
     azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
     azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
-    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
+    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_GPT_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
     azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION, // In Node.js defaults to process.env.AZURE_OPENAI_API_VERSION
   });
   // Split texts into batches
@@ -76,8 +76,25 @@ Text:
 
           const response = await llm.invoke(prompt);
 
+          // Parse and validate response content
+          let triplets: Triplet[] = [];
+          try {
+            const parsed = schema.safeParse(
+              typeof response.content === "string"
+                ? JSON.parse(response.content)
+                : response.content
+            );
+            if (parsed.success) {
+              triplets = parsed.data.triplets;
+            } else {
+              console.warn("Triplet schema validation failed:", parsed.error);
+            }
+          } catch (e) {
+            console.warn("Failed to parse triplet response:", e);
+          }
+
           // Post-process to replace empty or generic predicates
-          const cleanedTriplets = response.triplets.map((t: Triplet) => ({
+          const cleanedTriplets = triplets.map((t: Triplet) => ({
             subject: t.subject.trim(),
             predicate:
               !t.predicate || t.predicate.toLowerCase() === "relationship"
