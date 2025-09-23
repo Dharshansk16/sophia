@@ -1,8 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { assignTag, removeTag } from "@/lib/persona/personas";
 
-type Params = { params: { id: string; tagId: string } };
-
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string; tagId: string }> }
