@@ -3,6 +3,7 @@
 import type React from "react";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,27 +24,35 @@ interface ChatMessage {
 
 interface ChatInterfaceProps {
   persona: Persona;
+  messages?: ChatMessage[];
 }
 
-export function ChatInterface({ persona }: ChatInterfaceProps) {
+export function ChatInterface({ persona, messages: messagesProp }: ChatInterfaceProps) {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      content: `Greetings! I am ${
-        persona.name
-      }. I'm delighted to engage in discourse with you about the mysteries of ${
-        persona.field?.toLowerCase() || "knowledge"
-      } and the nature of our universe. What questions burn in your curious mind?`,
-      sender: "persona",
-      timestamp: new Date(),
-      // Remove hardcoded citations for greeting message
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (messagesProp && messagesProp.length > 0) {
+      return messagesProp;
+    }
+    return [
+      {
+        id: "1",
+        content: `Greetings! I am ${
+          persona.name
+        }. I'm delighted to engage in discourse with you about the mysteries of ${
+          persona.field?.toLowerCase() || "knowledge"
+        } and the nature of our universe. What questions burn in your curious mind?`,
+        sender: "persona",
+        timestamp: new Date(),
+      },
+    ];
+  });
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,11 +62,25 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    if (messagesProp) {
+      setMessages(messagesProp);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messagesProp]);
+
   // Initialize conversation when component mounts
   useEffect(() => {
     const initializeConversation = async () => {
       if (!user) {
         toast.error("Please log in to start a conversation");
+        return;
+      }
+
+      // Check if conversationId exists in URL
+      const urlConversationId = searchParams.get("sessionId");
+      if (urlConversationId) {
+        setConversationId(urlConversationId);
         return;
       }
 
@@ -68,6 +91,11 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
           "SINGLE"
         );
         setConversationId(conversation.id);
+
+        // Update URL with conversation id
+        const params = new URLSearchParams(Array.from(searchParams.entries()));
+        params.set("sessionId", conversation.id);
+        router.replace(`?${params.toString()}`, { scroll: false });
       } catch (error) {
         console.error("Failed to create conversation:", error);
         toast.error("Failed to start conversation");
@@ -75,6 +103,7 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
     };
 
     initializeConversation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, persona.id]);
 
   const handleSendMessage = async () => {
@@ -121,7 +150,6 @@ export function ChatInterface({ persona }: ChatInterfaceProps) {
             content: response.aiMessage.content,
             sender: "persona",
             timestamp: new Date(response.aiMessage.createdAt || Date.now()),
-            // Don't add hardcoded citations - they'll be parsed from content
           });
         }
 

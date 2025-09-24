@@ -147,7 +147,7 @@ export const authAPI = {
   },
 
   signOut: async () => {
-    await api.post("/api/auth/client/signOut");
+    await api.post("/api/auth/client/signOut", { refreshToken: localStorage.getItem("refreshToken") }); 
   },
 
   refresh: async (refreshToken: string) => {
@@ -289,6 +289,16 @@ export const conversationsAPI = {
     );
     return data;
   },
+
+  getAll: async (userId: string): Promise<Conversation[]> => {
+    const { data } = await api.get(`/api/conversations?userId=${userId}`);
+    return data;
+  },
+
+  setMessages: async (id: string): Promise<void> => {
+    const { data } = await api.get(`/api/conversations/${id}`);
+    return data;
+  }
 };
 
 export const debatesAPI = {

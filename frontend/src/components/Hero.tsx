@@ -1,7 +1,11 @@
 "use client";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export default function Hero() {
+
+    const router = useRouter();
+
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
             <div className="absolute bg-transparent md:bg-black/10" />
@@ -96,8 +100,9 @@ export default function Hero() {
                                 <button
                                     type="button"
                                     className="bg-black text-white font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-2xl shadow-2xl shadow-black/25 hover:shadow-black/40 transition-all duration-300 text-base sm:text-lg"
+                                    onClick={() => { router.push("/persona") }}
                                 >
-                                    Start Exploring
+                                    Get Started
                                 </button>
                             </motion.div>
 
@@ -111,7 +116,7 @@ export default function Hero() {
                                     className="border-2 border-black text-black hover:bg-black/10 font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-2xl backdrop-blur-sm transition-all duration-300 text-base sm:text-lg flex items-center"
                                 >
                                     <span className="w-5 h-5 mr-2 bg-black rounded-full inline-block" />
-                                    Watch Demo
+                                    Explore
                                 </button>
                             </motion.div>
                         </motion.div>

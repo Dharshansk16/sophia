@@ -3,8 +3,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Users, Download, X } from "lucide-react"
+import { Clock, Users, X } from "lucide-react"
 import type { Persona } from "@/app/page"
+import { useEffect, useState } from "react"
+import { conversationsAPI } from "@/lib/api"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/AuthContext"
 
 interface SidebarProps {
   isOpen: boolean
@@ -15,11 +19,29 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debatePersonas }: SidebarProps) {
-  const chatHistory = [
-    { id: "1", title: "Discussion on Relativity", persona: "Einstein", date: "2 hours ago" },
-    { id: "2", title: "Laws of Motion Debate", persona: "Newton vs Aristotle", date: "1 day ago" },
-    { id: "3", title: "Philosophy of Knowledge", persona: "Plato", date: "3 days ago" },
-  ]
+  const [chatHistory, setChatHistory] = useState<
+    { id: string; title: string; persona: string; date: string }[]
+  >([])
+  const { user } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    const userId = user?.id
+    if (!userId) return
+
+    conversationsAPI.getAll(userId).then((conversations) => {
+      if (!conversations) setChatHistory([])
+      else
+        setChatHistory(
+          conversations.map((conv) => ({
+            id: conv.id,
+            title: conv.title || "Untitled Session",
+            persona: conv.personaId || "Unknown",
+            date: new Date(conv.createdAt ?? "").toLocaleString(),
+          }))
+        )
+    })
+  }, [])
 
   return (
     <>
@@ -107,33 +129,23 @@ export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debateP
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {chatHistory.map((session) => (
-                <div
-                  key={session.id}
-                  className="p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                >
-                  <p className="font-medium text-sm text-balance">{session.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{session.persona}</p>
-                  <p className="text-xs text-muted-foreground">{session.date}</p>
+              {chatHistory.length === 0 ? (
+                <div className="text-xs text-muted-foreground text-center py-4">
+                  No chats found
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Actions */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                <Download className="h-4 w-4 mr-2" />
-                Export Session
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                <Users className="h-4 w-4 mr-2" />
-                Share Debate
-              </Button>
+              ) : (
+                chatHistory.map((session) => (
+                  <div
+                    key={session.id}
+                    className="p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                    onClick={() => { router.push(`/persona?sessionId=${session.id}`); onClose(); }}
+                  >
+                    <p className="font-medium text-sm text-balance">{session.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{session.persona}</p>
+                    <p className="text-xs text-muted-foreground">{session.date}</p>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 
