@@ -15,6 +15,8 @@ export async function POST(
     const { debateId } = await context.params;
     const { initialMessage } = (await req.json()) as RequestBody;
 
+    console.log("Debate message API called:", { debateId, initialMessage });
+
     if (!debateId) {
       return NextResponse.json(
         { error: "debateId is required" },
@@ -41,7 +43,10 @@ export async function POST(
     }
 
     const conversationId = debate.conversation.id;
-    const participants = debate.participants;
+    // Ensure participants array order is respected (orderIndex)
+    const participants = [...debate.participants].sort(
+      (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)
+    );
 
     if (participants.length !== 2) {
       return NextResponse.json(
@@ -50,36 +55,58 @@ export async function POST(
       );
     }
 
-    // --- Determine next persona (turn-taking) ---
-    const lastMessage = debate.conversation.messages.slice(-1)[0];
-    const nextPersonaId = !lastMessage
-      ? participants[0].personaId
-      : participants.find((p) => p.personaId !== lastMessage.authorPersonaId)!
-          .personaId;
-
-    // --- Fetch context for this persona from KB/embeddings + KG ---
-    const contextData = await fetchContextForAI(
-      lastMessage?.content ?? initialMessage ?? "",
-      nextPersonaId
+    // Determine next persona based on existing messages count (topic messages excluded)
+    const existingMessages = debate.conversation.messages || [];
+    // Count only messages authored by personas (exclude system/topic)
+    const personaMessages = existingMessages.filter(
+      (m: any) => !!m.authorPersonaId
     );
+    const nextIdx = personaMessages.length % 2; // 0 => first persona, 1 => second persona
+    const nextPersona = participants[nextIdx];
+    const personaId = nextPersona.personaId;
 
-    // --- Generate debate response using persona-specific context ---
-    const aiContent = await callDebateAI({
-      previousMessage: lastMessage?.content ?? initialMessage ?? "",
-      context: contextData.llmContext,
-      personaId: nextPersonaId,
+    console.log("Persona selection:", {
+      existingMessagesCount: existingMessages.length,
+      personaMessagesCount: personaMessages.length,
+      nextIdx,
+      nextPersonaId: personaId,
+      participants: participants.map((p) => ({
+        id: p.personaId,
+        orderIndex: p.orderIndex,
+      })),
     });
 
-    // --- Save AI message ---
+    // Choose last message content (topic or last persona message)
+    const lastMessage =
+      personaMessages.length > 0
+        ? personaMessages[personaMessages.length - 1].content
+        : initialMessage;
+
+    // Fetch context and generate response for the chosen persona
+    const contextData = await fetchContextForAI(lastMessage ?? "", personaId);
+    const aiContent = await callDebateAI({
+      previousMessage: lastMessage ?? "",
+      context: contextData.llmContext,
+      personaId,
+    });
+
+    // Save a single message and return it
     const message = await prisma.message.create({
       data: {
         conversationId,
         content: aiContent.answer,
-        authorPersonaId: nextPersonaId,
+        authorPersonaId: personaId,
       },
       include: {
         authorPersona: { select: { id: true, name: true, imageUrl: true } },
       },
+    });
+
+    console.log("Created message:", {
+      id: message.id,
+      content: message.content.substring(0, 100) + "...",
+      authorPersonaId: message.authorPersonaId,
+      authorPersonaName: message.authorPersona?.name,
     });
 
     return NextResponse.json({ message }, { status: 201 });

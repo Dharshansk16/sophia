@@ -53,7 +53,7 @@ export function DebateInterface({
     return persona?.color || "#6366f1";
   };
 
-  // Start debate
+  // Start debate and display responses one-by-one
   const startDebate = async () => {
     if (!topic.trim()) {
       toast.error("Please enter a debate topic");
@@ -73,6 +73,7 @@ export function DebateInterface({
     try {
       setIsStarting(true);
       setMessages([]);
+      setIsDebating(true);
 
       // Create debate
       const response = await debatesAPI.create(
@@ -82,58 +83,94 @@ export function DebateInterface({
       );
 
       setCurrentDebateId(response.id);
-      setIsDebating(true);
+      const originalTopic = topic.trim();
       setTopic("");
 
-      // Start automatic debate continuation
-      setTimeout(() => continueDebate(response.id), 1000);
+      // Show topic as first message
+      const topicMessage: DebateMessage = {
+        id: "topic",
+        content: originalTopic,
+        author: "Topic",
+        personaId: "topic",
+        conversationId: response.id,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages([topicMessage]);
 
-      toast.success("Debate started! Personas will now debate automatically.");
+      // Start the debate sequence
+      console.log("Starting debate sequence with:", {
+        debateId: response.id,
+        topic: originalTopic,
+      });
+      await runDebateSequence(response.id, originalTopic);
     } catch (error: any) {
       console.error("Error starting debate:", error);
       toast.error(error.response?.data?.error || "Failed to start debate");
+      setIsDebating(false);
     } finally {
       setIsStarting(false);
     }
   };
 
-  // Continue debate automatically
-  const continueDebate = async (debateId: string) => {
-    if (!isDebating) return;
+  // Run the debate sequence with proper error handling
+  const runDebateSequence = async (debateId: string, initialTopic: string) => {
+    let lastMessageContent = initialTopic;
+    const maxRounds = 4; // 4 persona messages (2 rounds each)
 
-    try {
-      setIsTyping(true);
+    for (let round = 0; round < maxRounds; round++) {
+      // Check if debate is still active
+      try {
+        setIsTyping(true);
+        setCurrentPersona(selectedPersonas[round % 2]?.name || "Persona");
 
-      // Send message to trigger next persona response
-      const response = await debatesAPI.sendMessage(debateId, "continue");
+        console.log(
+          `Starting round ${round + 1}, calling backend with:`,
+          lastMessageContent
+        );
 
-      if (response.data?.message) {
-        const newMessage: DebateMessage = {
-          id: response.data.message.id || Date.now().toString(),
-          content: response.data.message.content,
-          author: response.data.message.author,
-          personaId: response.data.message.personaId,
-          conversationId: response.data.message.conversationId,
-          createdAt:
-            response.data.message.createdAt || new Date().toISOString(),
-        };
+        const res = await debatesAPI.sendMessage(debateId, lastMessageContent);
 
-        addMessage(newMessage);
-        setCurrentPersona(newMessage.author);
+        console.log("Backend response:", res);
 
-        // Continue debate after a delay if still active
-        if (isDebating) {
-          setTimeout(() => continueDebate(debateId), 3000);
+        if (res?.message) {
+          const m = res.message;
+          const newMessage: DebateMessage = {
+            id: m.id,
+            content: m.content,
+            author:
+              m.authorPersona?.name ||
+              selectedPersonas[round % 2]?.name ||
+              "Persona",
+            personaId: m.authorPersonaId,
+            conversationId: m.conversationId,
+            createdAt: m.createdAt,
+          };
+
+          console.log("Adding message:", newMessage);
+          setMessages((prev) => [...prev, newMessage]);
+          lastMessageContent = newMessage.content;
+
+          // Small delay for better UX
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        } else {
+          console.error("No message received from backend");
+          break;
         }
+      } catch (error: any) {
+        console.error(`Error in round ${round + 1}:`, error);
+        toast.error(
+          `Error generating response from ${
+            selectedPersonas[round % 2]?.name || "persona"
+          }`
+        );
+        break;
+      } finally {
+        setIsTyping(false);
       }
-    } catch (error: any) {
-      console.error("Error continuing debate:", error);
-      if (error.response?.status !== 404) {
-        toast.error("Error in debate continuation");
-      }
-    } finally {
-      setIsTyping(false);
     }
+
+    setCurrentPersona("");
+    toast.success("Debate completed!");
   };
 
   // Stop debate
@@ -245,29 +282,39 @@ export function DebateInterface({
                   </div>
                 ) : (
                   messages.map((message) => {
-                    const persona = getPersonaById(message.personaId);
+                    // Use persona name from message or fallback to selected personas
+                    let displayName = message.author;
+                    let personaColor = "#6366f1";
+
+                    if (message.personaId === "topic") {
+                      displayName = "Topic";
+                      personaColor = "#9333ea";
+                    } else {
+                      const persona = getPersonaById(message.personaId);
+                      if (persona) {
+                        displayName = persona.name;
+                        personaColor = persona.color || "#6366f1";
+                      }
+                    }
+
                     return (
                       <div
                         key={message.id}
                         className="p-4 rounded-lg border-l-4"
                         style={{
-                          borderLeftColor: getPersonaColor(message.personaId),
-                          backgroundColor: `${getPersonaColor(
-                            message.personaId
-                          )}08`,
+                          borderLeftColor: personaColor,
+                          backgroundColor: `${personaColor}08`,
                         }}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <Badge
                             variant="secondary"
                             style={{
-                              backgroundColor: getPersonaColor(
-                                message.personaId
-                              ),
+                              backgroundColor: personaColor,
                               color: "white",
                             }}
                           >
-                            {persona?.name || message.author}
+                            {displayName}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             {new Date(message.createdAt).toLocaleTimeString()}

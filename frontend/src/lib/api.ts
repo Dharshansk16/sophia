@@ -312,11 +312,13 @@ export const debatesAPI = {
   },
 
   sendMessage: async (debateId: string, initialMessage?: string) => {
-    const { data } = await api.post(`/api/debates/${debateId}/messages`, {
-      debateId,
-      initialMessage,
-    });
-    return data;
+    const payload: any = {};
+    if (initialMessage !== undefined) payload.initialMessage = initialMessage;
+    const { data } = await api.post(
+      `/api/debates/${debateId}/messages`,
+      payload
+    );
+    return data; // expected shape: { message }
   },
 
   getMessages: async (debateId: string): Promise<Message[]> => {
