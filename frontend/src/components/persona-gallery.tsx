@@ -13,7 +13,7 @@ const fallbackPersonas: Persona[] = [
     name: "Albert Einstein",
     field: "Physics",
     era: "1879-1955",
-    avatar: "/albert-einstein-portrait-vintage-sepia.jpg",
+    imageUrl: "/albert-einstein-portrait-vintage-sepia.jpg",
     description: "Theoretical physicist who developed the theory of relativity",
     color: "sepia",
   },
@@ -22,7 +22,7 @@ const fallbackPersonas: Persona[] = [
     name: "Isaac Newton",
     field: "Mathematics & Physics",
     era: "1643-1727",
-    avatar: "/isaac-newton-portrait-vintage-sepia.jpg",
+    imageUrl: "/isaac-newton-portrait-vintage-sepia.jpg",
     description:
       "Mathematician and physicist who formulated the laws of motion",
     color: "amber",
@@ -32,7 +32,7 @@ const fallbackPersonas: Persona[] = [
     name: "Plato",
     field: "Philosophy",
     era: "428-348 BCE",
-    avatar: "/plato-ancient-philosopher-portrait-marble-statue.jpg",
+    imageUrl: "/plato-ancient-philosopher-portrait-marble-statue.jpg",
     description: "Ancient Greek philosopher and founder of the Academy",
     color: "stone",
   },
@@ -41,7 +41,7 @@ const fallbackPersonas: Persona[] = [
     name: "Marie Curie",
     field: "Chemistry & Physics",
     era: "1867-1934",
-    avatar: "/marie-curie-portrait-vintage-sepia.jpg",
+    imageUrl: "/marie-curie-portrait-vintage-sepia.jpg",
     description:
       "Pioneering researcher on radioactivity and Nobel Prize winner",
     color: "emerald",
@@ -51,7 +51,7 @@ const fallbackPersonas: Persona[] = [
     name: "Charles Darwin",
     field: "Natural Science",
     era: "1809-1882",
-    avatar: "/charles-darwin-portrait-vintage-sepia.jpg",
+    imageUrl: "/charles-darwin-portrait-vintage-sepia.jpg",
     description: "Naturalist who proposed the theory of evolution",
     color: "green",
   },
@@ -60,7 +60,7 @@ const fallbackPersonas: Persona[] = [
     name: "Aristotle",
     field: "Philosophy & Science",
     era: "384-322 BCE",
-    avatar: "/aristotle-ancient-philosopher-portrait-marble-stat.jpg",
+    imageUrl: "/aristotle-ancient-philosopher-portrait-marble-stat.jpg",
     description: "Ancient Greek philosopher and polymath",
     color: "slate",
   },
@@ -231,7 +231,7 @@ export function PersonaGallery({
               <CardContent className="p-6 text-center">
                 <div className="relative mb-4">
                   <img
-                    src={persona.avatar || "/placeholder.svg"}
+                    src={persona.imageUrl || "/placeholder.svg"}
                     alt={persona.name}
                     className="w-24 h-24 rounded-full mx-auto border-4 border-border shadow-lg"
                   />

@@ -42,14 +42,13 @@ Persona description: ${persona.shortBio}`
     SystemMessagePromptTemplate.fromTemplate(`
 ${personaStyle}
 
-You are engaged in a debate. Your goal is to respond to your opponent's message with:
-1. Counter-arguments where applicable.
-2. Keep the answer short and concise.
-3. Reasoned points supporting your own stance.
-4. Maintain a debate tone and be persuasive.
-5. Use context (chunks + KG) if relevant.
-6. Keep responses concise (under 200 words).
-7. Do not invent facts outside the provided context.
+You are engaged in a debate. Follow these rules strictly:
+1. Respond in the unique style, tone, and worldview of the persona.
+2. Do NOT invent facts or hallucinate; only use information available in the provided context.
+3. Focus on counter-arguments and defending your position.
+4. Keep responses concise, persuasive, and under 200 words.
+5. If the context does not provide enough information, clearly state that you cannot answer instead of guessing.
+6. Maintain a debate tone, logical reasoning, and clarity.
 `),
     HumanMessagePromptTemplate.fromTemplate(`
 Opponent's Message:
@@ -63,13 +62,14 @@ Your Response:`),
 
   const chatModel = new AzureChatOpenAI({
     model: "gpt-5-nano",
-    temperature: 1,
+    temperature: 0, // Lower temperature to reduce hallucinations
     azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
     azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
     azureOpenAIApiDeploymentName:
-      process.env.AZURE_OPENAI_API_GPT_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
-    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION, // In Node.js defaults to process.env.AZURE_OPENAI_API_VERSION
+      process.env.AZURE_OPENAI_API_GPT_DEPLOYMENT_NAME,
+    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION,
   });
+
   const chain = RunnableSequence.from([
     promptTemplate,
     chatModel,

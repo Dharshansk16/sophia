@@ -72,7 +72,8 @@ export interface Persona {
   description?: string;
   field?: string;
   era?: string;
-  avatar?: string;
+
+  imageUrl?: string;
   color?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -149,7 +150,9 @@ export const authAPI = {
   },
 
   signOut: async () => {
-    await api.post("/api/auth/client/signOut", { refreshToken: localStorage.getItem("refreshToken") }); 
+    await api.post("/api/auth/client/signOut", {
+      refreshToken: localStorage.getItem("refreshToken"),
+    });
   },
 
   refresh: async (refreshToken: string) => {
@@ -286,9 +289,7 @@ export const conversationsAPI = {
   },
 
   getMessages: async (conversationId: string): Promise<Message[]> => {
-    const { data } = await api.get(
-      `/api/conversations/${conversationId}`
-    );
+    const { data } = await api.get(`/api/conversations/${conversationId}`);
     return data;
   },
 
@@ -300,7 +301,7 @@ export const conversationsAPI = {
   setMessages: async (id: string): Promise<void> => {
     const { data } = await api.get(`/api/conversations/${id}`);
     return data;
-  }
+  },
 };
 
 export const debatesAPI = {
