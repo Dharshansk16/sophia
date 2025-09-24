@@ -90,7 +90,7 @@ export function PersonaGallery({
             ...persona,
             field: persona.field || "Unknown Field",
             era: persona.era || "Unknown Era",
-            avatar: persona.avatar || "/placeholder.svg",
+            avatar: persona.imageUrl || "/placeholder.svg",
             color: persona.color || "gray",
           }));
           setPersonas(mappedPersonas);
@@ -157,7 +157,7 @@ export function PersonaGallery({
                   <div className="text-center">
                     <img
                       src={
-                        selectedDebatePersonas[0].avatar || "/placeholder.svg"
+                        selectedDebatePersonas[0].imageUrl || "/placeholder.svg"
                       }
                       alt={selectedDebatePersonas[0].name}
                       className="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-primary"
@@ -176,7 +176,7 @@ export function PersonaGallery({
                   <div className="text-center">
                     <img
                       src={
-                        selectedDebatePersonas[1].avatar || "/placeholder.svg"
+                        selectedDebatePersonas[1].imageUrl || "/placeholder.svg"
                       }
                       alt={selectedDebatePersonas[1].name}
                       className="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-primary"

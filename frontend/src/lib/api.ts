@@ -99,6 +99,7 @@ export interface Conversation {
   personaId?: string | null;
   type: "SINGLE" | "DEBATE";
   title?: string | null;
+  messages?: Message[];
   createdAt?: string;
 }
 
@@ -108,6 +109,7 @@ export interface Message {
   content: string;
   authorUserId?: string | null;
   authorPersonaId?: string | null;
+  authorUser?: User | null;
   createdAt?: string;
 }
 
@@ -285,7 +287,7 @@ export const conversationsAPI = {
 
   getMessages: async (conversationId: string): Promise<Message[]> => {
     const { data } = await api.get(
-      `/api/conversations/${conversationId}/messages`
+      `/api/conversations/${conversationId}`
     );
     return data;
   },

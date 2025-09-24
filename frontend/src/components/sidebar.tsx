@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Clock, Users, X } from "lucide-react"
-import type { Persona } from "@/app/page"
+import type { Persona } from "@/lib/api"
 import { useEffect, useState } from "react"
-import { conversationsAPI } from "@/lib/api"
+import { conversationsAPI, personasAPI } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 
@@ -20,8 +20,10 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debatePersonas }: SidebarProps) {
   const [chatHistory, setChatHistory] = useState<
-    { id: string; title: string; persona: string; date: string }[]
+    { id: string; title: string; persona: string; date: string; personaId?: string }[]
   >([])
+  const [personaDetails, setPersonaDetails] = useState<Record<string, string>>({})
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const { user } = useAuth()
   const router = useRouter()
 
@@ -29,19 +31,66 @@ export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debateP
     const userId = user?.id
     if (!userId) return
 
-    conversationsAPI.getAll(userId).then((conversations) => {
-      if (!conversations) setChatHistory([])
-      else
-        setChatHistory(
-          conversations.map((conv) => ({
-            id: conv.id,
-            title: conv.title || "Untitled Session",
-            persona: conv.personaId || "Unknown",
-            date: new Date(conv.createdAt ?? "").toLocaleString(),
-          }))
+    setIsLoadingHistory(true)
+    
+    conversationsAPI.getAll(userId).then(async (conversations) => {
+      if (!conversations) {
+        setChatHistory([])
+        setIsLoadingHistory(false)
+        return
+      }
+      
+      // Create a map of personaId to persona name
+      const personaIds = [...new Set(conversations.map(conv => conv.personaId).filter(Boolean))]
+      const personaMap: Record<string, string> = {}
+      
+      try {
+        await Promise.all(
+          personaIds.map(async (personaId) => {
+            if (personaId) {
+              try {
+                const persona = await personasAPI.get(personaId)
+                personaMap[personaId] = persona.name
+              } catch (error) {
+                console.error(`Failed to fetch persona ${personaId}:`, error)
+                personaMap[personaId] = "Unknown Persona"
+              }
+            }
+          })
         )
+        setPersonaDetails(personaMap)
+      } catch (error) {
+        console.error("Failed to fetch persona details:", error)
+      }
+      
+      setChatHistory(
+        conversations.map((conv) => ({
+          id: conv.id,
+          title: conv.title || "Untitled Session",
+          persona: conv.personaId ? (personaMap[conv.personaId] || "Loading...") : "Unknown",
+          date: new Date(conv.createdAt ?? "").toLocaleString(),
+          personaId: conv.personaId || undefined,
+        }))
+      )
+      
+      setIsLoadingHistory(false)
+    }).catch(error => {
+      console.error("Failed to fetch conversations:", error)
+      setIsLoadingHistory(false)
     })
-  }, [])
+  }, [user])
+
+  useEffect(() => {
+    // Update chat history with persona names once they're loaded
+    setChatHistory(prevHistory =>
+      prevHistory.map(session => ({
+        ...session,
+        persona: session.personaId && personaDetails[session.personaId] 
+          ? personaDetails[session.personaId]
+          : session.persona
+      }))
+    )
+  }, [personaDetails])
 
   return (
     <>
@@ -77,7 +126,7 @@ export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debateP
                 {currentView === "chat" && selectedPersona && (
                   <div className="flex items-center gap-3">
                     <img
-                      src={selectedPersona.avatar || "/placeholder.svg"}
+                      src={selectedPersona.imageUrl || "/placeholder.svg"}
                       alt={selectedPersona.name}
                       className="w-10 h-10 rounded-full border border-border"
                     />
@@ -94,7 +143,7 @@ export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debateP
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <img
-                        src={debatePersonas[0].avatar || "/placeholder.svg"}
+                        src={debatePersonas[0].imageUrl || "/placeholder.svg"}
                         alt={debatePersonas[0].name}
                         className="w-8 h-8 rounded-full border border-border"
                       />
@@ -103,7 +152,7 @@ export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debateP
                     <div className="text-center text-xs text-muted-foreground">VS</div>
                     <div className="flex items-center gap-3">
                       <img
-                        src={debatePersonas[1].avatar || "/placeholder.svg"}
+                        src={debatePersonas[1].imageUrl || "/placeholder.svg"}
                         alt={debatePersonas[1].name}
                         className="w-8 h-8 rounded-full border border-border"
                       />
@@ -129,7 +178,12 @@ export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debateP
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {chatHistory.length === 0 ? (
+              {isLoadingHistory ? (
+                <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                  <p className="text-xs text-muted-foreground">Loading sessions...</p>
+                </div>
+              ) : chatHistory.length === 0 ? (
                 <div className="text-xs text-muted-foreground text-center py-4">
                   No chats found
                 </div>

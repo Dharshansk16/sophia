@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PersonaGallery } from "@/components/persona-gallery";
 import { ChatInterface } from "@/components/chat-interface";
 import { DebateInterface } from "@/components/debate-interface";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Menu, X, Home } from "lucide-react";
-import { type Persona } from "@/lib/api";
+import { type Persona, conversationsAPI, personasAPI } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export type ChatMessage = {
   id: string;
@@ -108,6 +109,26 @@ function MobileMenuButton({
 }
 
 export default function SophiaApp() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#ece7df] via-[#d6cfc0] to-[#b8ab8f]">
+        <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-8 border border-black/10 shadow-2xl text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <h1 className="text-2xl font-bold text-black mb-4">
+            Loading...
+          </h1>
+          <p className="text-gray-600">
+            Please wait while we prepare the application.
+          </p>
+        </div>
+      </div>
+    }>
+      <SophiaAppContent />
+    </Suspense>
+  );
+}
+
+function SophiaAppContent() {
   const [currentView, setCurrentView] = useState<"gallery" | "chat" | "debate">(
     "gallery"
   );
@@ -117,7 +138,44 @@ export default function SophiaApp() {
   >([null, null]);
   const [isDebateMode, setIsDebateMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
   const { user } = useAuth();
+  
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Handle session loading from URL parameters
+  useEffect(() => {
+    const loadSessionFromUrl = async () => {
+      const sessionId = searchParams.get("sessionId");
+      if (!sessionId || !user) return;
+      
+      setIsLoadingSession(true);
+      
+      try {
+        // Get conversation details
+        const conversation = await conversationsAPI.get(sessionId);
+        
+        if (conversation.personaId) {
+          // Get persona details
+          const persona = await personasAPI.get(conversation.personaId);
+          
+          // Set the persona and navigate to chat
+          setSelectedPersona(persona);
+          setCurrentView("chat");
+        } else {
+          toast.error("No persona associated with this conversation");
+        }
+      } catch (error) {
+        console.error("Failed to load conversation:", error);
+        toast.error("Failed to load conversation");
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+    
+    loadSessionFromUrl();
+  }, [searchParams, user]);
 
   if (!user) {
     return (
@@ -136,6 +194,23 @@ export default function SophiaApp() {
           >
             Go to Login
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state when loading a session from URL
+  if (isLoadingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#ece7df] via-[#d6cfc0] to-[#b8ab8f]">
+        <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-8 border border-black/10 shadow-2xl text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <h1 className="text-2xl font-bold text-black mb-4">
+            Loading Session...
+          </h1>
+          <p className="text-gray-600">
+            Please wait while we load your conversation.
+          </p>
         </div>
       </div>
     );

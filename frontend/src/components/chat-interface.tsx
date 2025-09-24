@@ -81,6 +81,40 @@ export function ChatInterface({ persona, messages: messagesProp }: ChatInterface
       const urlConversationId = searchParams.get("sessionId");
       if (urlConversationId) {
         setConversationId(urlConversationId);
+        
+        // Load existing conversation with messages
+        try {
+          const conversation = await conversationsAPI.get(urlConversationId);
+          
+          if (conversation.messages && Array.isArray(conversation.messages)) {
+            const chatMessages: ChatMessage[] = conversation.messages.map((msg) => ({
+              id: msg.id,
+              content: msg.content,
+              sender: msg.authorUser ? "user" : "persona",
+              timestamp: new Date(msg.createdAt || Date.now()),
+            }));
+            
+            // If there are no messages, add the default greeting
+            if (chatMessages.length === 0) {
+              chatMessages.push({
+                id: "1",
+                content: `Greetings! I am ${
+                  persona.name
+                }. I'm delighted to engage in discourse with you about the mysteries of ${
+                  persona.field?.toLowerCase() || "knowledge"
+                } and the nature of our universe. What questions burn in your curious mind?`,
+                sender: "persona",
+                timestamp: new Date(),
+              });
+            }
+            
+            setMessages(chatMessages);
+          }
+        } catch (error) {
+          console.error("Failed to load conversation:", error);
+          toast.error("Failed to load conversation");
+        }
+        
         return;
       }
 
@@ -211,7 +245,7 @@ export function ChatInterface({ persona, messages: messagesProp }: ChatInterface
       {/* Chat header */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm p-3 md:p-4 flex items-center gap-4 flex-shrink-0">
         <img
-          src={persona.avatar || "/placeholder.svg"}
+          src={persona.imageUrl || "/placeholder.svg"}
           alt={persona.name}
           className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-border"
         />
