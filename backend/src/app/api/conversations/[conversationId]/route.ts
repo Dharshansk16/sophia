@@ -16,15 +16,28 @@ export async function GET(
     }
 
     const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
+      where: { 
+        id: conversationId,
+        type: "SINGLE"
+      },
       select: {
+      id: true,
+      userId: true,
+      personaId: true,
+      type: true,
+      title: true,
+      messages: {
+        select: {
         id: true,
-        userId: true,
-        personaId: true,
-        type: true,
-        title: true,
+        content: true,
+        authorUser: true,
         createdAt: true,
-        updatedAt: true,
+        citations: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+      createdAt: true,
+      updatedAt: true,
       },
     });
 

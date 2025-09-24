@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
         id: true,
         type: true,
         personaId: true,
+        persona: { select: { name: true } },
         title: true,
         createdAt: true,
       },
