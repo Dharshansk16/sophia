@@ -67,7 +67,7 @@ Retrieved Context:
 `),
   ]);
 
-  // --- 3. Initialize ChatGoogleGenerativeAI ---
+  // --- 3. Initialize AzureChatOpenAI ---
   const chatModel = new AzureChatOpenAI({
     model: "gpt-5-nano",
     temperature: 1,
@@ -75,8 +75,8 @@ Retrieved Context:
     azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
     azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
     azureOpenAIApiDeploymentName:
-      process.env.AZURE_OPENAI_API_GPT_DEPLOYMENT_NAME, // In Node.js defaults to process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
-    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION, // In Node.js defaults to process.env.AZURE_OPENAI_API_VERSION
+      process.env.AZURE_OPENAI_API_GPT_DEPLOYMENT_NAME,
+    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION,
   });
 
   // --- 4. Build RunnableSequence ---
@@ -86,7 +86,7 @@ Retrieved Context:
     new StringOutputParser(),
   ]);
 
-  // --- 5. Log the context and query for debugging ---
+  // --- 5. Debug logging ---
   console.log("=== AI Request Debug ===");
   console.log("User Question:", prompt);
   console.log("Retrieved Context:", context);
@@ -121,18 +121,23 @@ Retrieved Context:
   }
 
   // --- 9. Build final formatted answer ---
-  const finalAnswer =
-    uniqueSources.size > 0
-      ? `${rawText}\n\n**Sources**\n${Array.from(uniqueSources.values())
-          .map(
-            (source, index) =>
-              `${index + 1}. [${source.url}] (Score: ${source.score})`
-          )
-          .join("\n")}`
-      : rawText;
+  let finalAnswer = rawText;
+  let sourcesArray: { url?: string; score?: string }[] = [];
+
+  // ✅ Only attach sources if the response does NOT contain "answer not in context"
+  if (!/answer not in context/i.test(rawText) && uniqueSources.size > 0) {
+    finalAnswer += `\n\n**Sources**\n${Array.from(uniqueSources.values())
+      .map(
+        (source, index) =>
+          `${index + 1}. [${source.url}] (Score: ${source.score})`
+      )
+      .join("\n")}`;
+
+    sourcesArray = Array.from(uniqueSources.values());
+  }
 
   return {
     answer: finalAnswer,
-    sources: Array.from(uniqueSources.values()),
+    sources: sourcesArray,
   };
 }
