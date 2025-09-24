@@ -70,9 +70,9 @@ export interface Persona {
   id: string;
   name: string;
   description?: string;
+  shortBio?: string;
   field?: string;
   era?: string;
-
   imageUrl?: string;
   color?: string;
   createdAt?: string;
@@ -92,6 +92,8 @@ export interface Upload {
   uploadedById: string;
   personaId?: string | null;
   createdAt?: string;
+  trainingStatus?: string;
+  message?: string;
 }
 
 export interface Conversation {
@@ -165,8 +167,14 @@ export const authAPI = {
 
 // Personas API
 export const personasAPI = {
-  list: async (): Promise<Persona[]> => {
-    const { data } = await api.get("/api/personas");
+  list: async (filter?: 'user' | 'admin'): Promise<Persona[]> => {
+    const params = filter ? `?filter=${filter}` : '';
+    const { data } = await api.get(`/api/personas${params}`);
+    return data;
+  },
+
+  listUser: async (): Promise<Persona[]> => {
+    const { data } = await api.get("/api/personas/user");
     return data;
   },
 
@@ -174,6 +182,13 @@ export const personasAPI = {
     persona: Omit<Persona, "id" | "createdAt" | "updatedAt">
   ): Promise<Persona> => {
     const { data } = await api.post("/api/personas", persona);
+    return data;
+  },
+
+  createUser: async (
+    persona: { name: string; shortBio?: string; imageUrl?: string }
+  ): Promise<Persona> => {
+    const { data } = await api.post("/api/personas/user", persona);
     return data;
   },
 
@@ -221,18 +236,7 @@ export const uploadsAPI = {
     return data;
   },
 
-  upload: async (
-    file: File,
-    userId: string,
-    personaId?: string
-  ): Promise<Upload> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("userId", userId);
-    if (personaId) {
-      formData.append("personaId", personaId);
-    }
-
+  upload: async (formData: FormData): Promise<Upload> => {
     const { data } = await api.post("/api/uploads", formData, {
       headers: {
         "Content-Type": "multipart/form-data",

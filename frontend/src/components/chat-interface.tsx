@@ -77,6 +77,24 @@ export function ChatInterface({ persona, messages: messagesProp }: ChatInterface
         return;
       }
 
+      if (!user.id) {
+        console.error("User object missing ID:", user);
+        toast.error("Invalid user session. Please log in again.");
+        return;
+      }
+
+      if (!persona) {
+        console.error("Persona is missing");
+        toast.error("Persona information is missing");
+        return;
+      }
+
+      if (!persona.id) {
+        console.error("Persona missing ID:", persona);
+        toast.error("Invalid persona data");
+        return;
+      }
+
       // Check if conversationId exists in URL
       const urlConversationId = searchParams.get("sessionId");
       if (urlConversationId) {
@@ -119,6 +137,7 @@ export function ChatInterface({ persona, messages: messagesProp }: ChatInterface
       }
 
       try {
+        console.log("Creating conversation with user ID:", user.id, "persona ID:", persona.id);
         const conversation = await conversationsAPI.create(
           user.id,
           persona.id,
@@ -132,7 +151,22 @@ export function ChatInterface({ persona, messages: messagesProp }: ChatInterface
         router.replace(`?${params.toString()}`, { scroll: false });
       } catch (error) {
         console.error("Failed to create conversation:", error);
-        toast.error("Failed to start conversation");
+        
+        // More specific error messages
+        if (error instanceof Error) {
+          console.error("Error name:", error.name);
+          console.error("Error message:", error.message);
+        }
+        
+        // Check if it's an axios error with response data
+        const axiosError = error as any;
+        if (axiosError.response?.data?.error) {
+          toast.error(`Failed to start conversation: ${axiosError.response.data.error}`);
+        } else if (axiosError.response?.status === 401) {
+          toast.error("Please log in again to start a conversation");
+        } else {
+          toast.error("Failed to start conversation. Please try again.");
+        }
       }
     };
 

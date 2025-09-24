@@ -2,9 +2,13 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { personasAPI, type Persona } from "@/lib/api";
 import { toast } from "sonner";
+import { Plus, User, BookOpen } from "lucide-react";
+import { PersonaDialog } from "./persona-dialog";
+import { useRouter } from "next/navigation";
 
 // Fallback personas for when API is not available
 const fallbackPersonas: Persona[] = [
@@ -79,11 +83,14 @@ export function PersonaGallery({
 }: PersonaGalleryProps) {
   const [personas, setPersonas] = useState<Persona[]>(fallbackPersonas);
   const [loading, setLoading] = useState(true);
+  const [showCreatePersona, setShowCreatePersona] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchPersonas = async () => {
       try {
-        const fetchedPersonas = await personasAPI.list();
+        // Get only admin personas for the main gallery
+        const fetchedPersonas = await personasAPI.list('admin');
         if (fetchedPersonas && fetchedPersonas.length > 0) {
           // Map backend personas to include display properties
           const mappedPersonas = fetchedPersonas.map((persona) => {
@@ -125,6 +132,15 @@ export function PersonaGallery({
     fetchPersonas();
   }, []);
 
+  const handlePersonaCreated = async () => {
+    setShowCreatePersona(false);
+    toast.success("Persona created successfully! Visit 'Your Personas' to chat with them.");
+  };
+
+  const handleGoToYourPersonas = () => {
+    router.push('/yourPersona');
+  };
+
   const isPersonaSelected = (persona: Persona) => {
     return (
       selectedDebatePersonas[0]?.id === persona.id ||
@@ -156,11 +172,38 @@ export function PersonaGallery({
           <h2 className="text-3xl font-bold font-[family-name:var(--font-playfair)] text-primary mb-2">
             Choose Your Historical Companion
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg mb-6">
             {isDebateMode
               ? "Select two personas to witness an intellectual debate through the ages"
               : "Engage in profound conversations with history's greatest minds"}
           </p>
+          
+          {/* Action buttons */}
+          <div className="flex justify-center gap-4 mb-8">
+            <Button
+              onClick={handleGoToYourPersonas}
+              variant="outline"
+              className="flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md"
+            >
+              <User className="h-4 w-4" />
+              Your Personas
+            </Button>
+            <Button
+              onClick={() => router.push('/uploads')}
+              variant="outline"
+              className="flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md"
+            >
+              <BookOpen className="h-4 w-4" />
+              Training Files
+            </Button>
+            <Button
+              onClick={() => setShowCreatePersona(true)}
+              className="flex items-center gap-2 rounded-full bg-primary/80 hover:bg-primary backdrop-blur-md"
+            >
+              <Plus className="h-4 w-4" />
+              Create New Persona
+            </Button>
+          </div>
         </div>
 
         {isDebateMode &&
@@ -281,6 +324,14 @@ export function PersonaGallery({
           ))}
         </div>
       </div>
+
+      {/* Create Persona Dialog */}
+      <PersonaDialog
+        isOpen={showCreatePersona}
+        onClose={() => setShowCreatePersona(false)}
+        onSuccess={handlePersonaCreated}
+        mode="create"
+      />
     </div>
   );
 }
