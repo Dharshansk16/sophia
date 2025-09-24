@@ -86,13 +86,27 @@ export function PersonaGallery({
         const fetchedPersonas = await personasAPI.list();
         if (fetchedPersonas && fetchedPersonas.length > 0) {
           // Map backend personas to include display properties
-          const mappedPersonas = fetchedPersonas.map((persona) => ({
-            ...persona,
-            field: persona.field || "Unknown Field",
-            era: persona.era || "Unknown Era",
-            avatar: persona.imageUrl || "/placeholder.svg",
-            color: persona.color || "gray",
-          }));
+          const mappedPersonas = fetchedPersonas.map((persona) => {
+            // Hardcode field and era for specific personas
+            let field = persona.field || "Unknown Field";
+            let era = persona.era || "Unknown Era";
+            
+            if (persona.name === "Albert Einstein") {
+              field = "Physics";
+              era = "1879-1955";
+            } else if (persona.name === "Isaac Newton") {
+              field = "Mathematics & Physics";
+              era = "1643-1727";
+            }
+            
+            return {
+              ...persona,
+              field,
+              era,
+              avatar: persona.imageUrl || "/placeholder.svg",
+              color: persona.color || "gray",
+            };
+          });
           setPersonas(mappedPersonas);
         } else {
           // If no personas from API, use fallback
