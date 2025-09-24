@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Menu, X, Home } from "lucide-react";
 import { type Persona } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export type ChatMessage = {
   id: string;
@@ -116,6 +117,29 @@ export default function SophiaApp() {
   >([null, null]);
   const [isDebateMode, setIsDebateMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#ece7df] via-[#d6cfc0] to-[#b8ab8f]">
+        <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-8 border border-black/10 shadow-2xl text-center">
+          <h1 className="text-3xl font-bold text-black mb-4">
+            Please Log In
+          </h1>
+          <p className="text-gray-600 mb-6">
+            You must be logged in to access the personas.
+          </p>
+          <Button
+            onClick={() => {
+              window.location.href = "/auth/login";
+            }}
+          >
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handlePersonaSelect = (persona: Persona) => {
     if (isDebateMode) {
@@ -146,7 +170,7 @@ export default function SophiaApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#ece7df] via-[#d6cfc0] to-[#b8ab8f] relative overflow-hidden">
       {/* Parchment texture overlay */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('/parchment-texture.png')] bg-cover bg-center" />
+      <div className="absolute inset-0 opacity-20 pointer-events-none" />
       <div className="relative z-10 flex h-screen max-h-screen">
         {/* Mobile toggle */}
         <MobileMenuButton

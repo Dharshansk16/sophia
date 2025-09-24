@@ -15,13 +15,18 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side validation
+    if (!email || !password) {
+      toast.error("Please enter both email and password.");
+      return;
+    }
+
     setLoading(true);
     try {
       await signIn(email, password);
       toast.success("Signed in successfully!");
       router.push("/");
-      console.log(user);
-    // biome-ignore lint/suspicious/noExplicitAny: <fix>
     } catch (error: any) {
       toast.error(error?.message || "Failed to sign in.");
     } finally {
@@ -126,7 +131,7 @@ export default function LoginPage() {
             <p className="text-gray-600">
               Don't have an account?{" "}
               <Link
-                href="/signup"
+                href="/auth/signup"
                 className="text-black font-semibold hover:underline"
               >
                 Sign up
