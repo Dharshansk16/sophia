@@ -184,8 +184,8 @@ export function DebateInterface({
 
   return (
     <div className="h-full flex flex-col">
-      <Card className="flex-1 flex flex-col">
-        <CardHeader className="border-b">
+      <Card className="h-full flex flex-col">
+        <CardHeader className="border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -213,7 +213,7 @@ export function DebateInterface({
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 flex flex-col p-4">
+        <CardContent className="flex-1 flex flex-col p-4 min-h-0">
           {!isDebating ? (
             /* Topic Input */
             <div className="space-y-4">
@@ -256,9 +256,9 @@ export function DebateInterface({
             </div>
           ) : (
             /* Active Debate */
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0">
               {/* Debate Controls */}
-              <div className="flex items-center justify-between mb-4 p-3 bg-muted rounded-lg">
+              <div className="flex items-center justify-between mb-4 p-3 bg-muted rounded-lg flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
                   <span className="text-sm font-medium">Debate Active</span>
@@ -275,7 +275,7 @@ export function DebateInterface({
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-0">
                 {messages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     Debate will start automatically...

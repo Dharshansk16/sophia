@@ -117,20 +117,18 @@ export function PersonaDialog({
               : isEdit
               ? "Edit your persona's details"
               : "View persona details"}
-            {(isCreate || isEdit) && (
-              <div className="mt-2">
-                <p className="text-sm text-muted-foreground">
-                  💡 <strong>Tip:</strong> After creating your persona, you can train it with documents by visiting the{" "}
-                  <button
-                    onClick={() => router.push('/uploads')}
-                    className="text-primary underline hover:no-underline"
-                  >
-                    Training Files page
-                  </button>
-                </p>
-              </div>
-            )}
           </DialogDescription>
+          {(isCreate || isEdit) && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              💡 <strong>Tip:</strong> After creating your persona, you can train it with documents by visiting the{" "}
+              <button
+                onClick={() => router.push('/uploads')}
+                className="text-primary underline hover:no-underline"
+              >
+                Training Files page
+              </button>
+            </div>
+          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>

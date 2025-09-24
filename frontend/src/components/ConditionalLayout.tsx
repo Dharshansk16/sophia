@@ -11,6 +11,11 @@ interface ConditionalLayoutProps {
 export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname();
   const isPersonaPage = pathname.startsWith("/persona");
+  const isYourPersonaPage = pathname.startsWith("/yourPersona");
+  const isUploadsPage = pathname.startsWith("/uploads");
+  
+  // Hide navbar and footer for persona pages, yourPersona pages, and uploads pages
+  const shouldHideNavAndFooter = isPersonaPage || isYourPersonaPage || isUploadsPage;
 
   return (
     <div className="relative flex flex-col min-h-screen">
@@ -21,18 +26,18 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
       />
       
       {/* Conditionally render Navbar */}
-      {!isPersonaPage && <Navbar />}
+      {!shouldHideNavAndFooter && <Navbar />}
       
       {/* Main content with conditional padding */}
       <div 
-        className={isPersonaPage ? "" : "mt-20 md:mt-0 mb-10 md:mb-0"} 
+        className={shouldHideNavAndFooter ? "" : "mt-20 md:mt-0 mb-10 md:mb-0"} 
         data-main-content
       >
         {children}
       </div>
       
       {/* Conditionally render Footer */}
-      {!isPersonaPage && <Footer />}
+      {!shouldHideNavAndFooter && <Footer />}
     </div>
   );
 }

@@ -19,9 +19,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
-  // Restore from storage
+  // Check if we're on the client side to prevent hydration mismatch
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Restore from storage only on client side
+  useEffect(() => {
+    if (!isClient) return;
+
     const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("accessToken");
     const storedExpiry = localStorage.getItem("accessTokenExpires");
@@ -42,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setAccessToken(storedToken);
       setIsLoading(false);
     }
-  }, []);
+  }, [isClient]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -51,13 +59,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(data.user);
       setAccessToken(data.accessToken);
 
-      localStorage.setItem("user", JSON.stringify(data.user));
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("refreshToken", data.refreshToken);
-      localStorage.setItem(
-        "accessTokenExpires",
-        data.accessTokenExpires.toString()
-      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
+        localStorage.setItem(
+          "accessTokenExpires",
+          data.accessTokenExpires.toString()
+        );
+      }
 
       toast.success("Signed in successfully!");
     } catch (error: any) {
@@ -78,11 +88,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     setUser(null);
     setAccessToken(null);
-    localStorage.clear();
+    if (typeof window !== 'undefined') {
+      localStorage.clear();
+    }
     toast.success("Signed out successfully");
   };
 
   const refreshToken = async () => {
+    if (typeof window === 'undefined') return;
+    
     const storedRefreshToken = localStorage.getItem("refreshToken");
     if (!storedRefreshToken) {
       await signOut();

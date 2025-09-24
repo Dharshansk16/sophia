@@ -291,8 +291,8 @@ function SophiaAppContent() {
             {currentView === "debate" &&
               debatePersonas[0] &&
               debatePersonas[1] && (
-                <div className="h-full w-full flex items-center justify-center">
-                  <div className="w-full max-w-4xl mx-auto bg-white/15 backdrop-blur-xl shadow-xl border border-white/20 rounded-2xl p-4 md:p-8">
+                <div className="h-full w-full">
+                  <div className="h-full w-full max-w-4xl mx-auto bg-white/15 backdrop-blur-xl shadow-xl border border-white/20 rounded-2xl overflow-hidden">
                     <DebateInterface
                       selectedPersonas={debatePersonas as [Persona, Persona]}
                       onClose={() => setCurrentView("gallery")}
