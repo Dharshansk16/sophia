@@ -63,14 +63,32 @@ export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debateP
         console.error("Failed to fetch persona details:", error)
       }
       
+      // Group conversations by persona and generate numbered titles
+      const personaSessionCounts: Record<string, number> = {}
+      
       setChatHistory(
-        conversations.map((conv) => ({
-          id: conv.id,
-          title: conv.title || "Untitled Session",
-          persona: conv.personaId ? (personaMap[conv.personaId] || "Loading...") : "Unknown",
-          date: new Date(conv.createdAt ?? "").toLocaleString(),
-          personaId: conv.personaId || undefined,
-        }))
+        conversations.map((conv) => {
+          const personaName = conv.personaId ? (personaMap[conv.personaId] || "Unknown") : "Unknown";
+          
+          // Generate session title
+          let title = conv.title;
+          if (!title || title === "Untitled Session") {
+            // Count sessions for this persona
+            if (!personaSessionCounts[personaName]) {
+              personaSessionCounts[personaName] = 0;
+            }
+            personaSessionCounts[personaName]++;
+            title = `${personaName} - ${personaSessionCounts[personaName]}`;
+          }
+          
+          return {
+            id: conv.id,
+            title: title,
+            persona: personaName,
+            date: new Date(conv.createdAt ?? "").toLocaleString(),
+            personaId: conv.personaId || undefined,
+          };
+        })
       )
       
       setIsLoadingHistory(false)
@@ -81,14 +99,31 @@ export function Sidebar({ isOpen, onClose, currentView, selectedPersona, debateP
   }, [user])
 
   useEffect(() => {
-    // Update chat history with persona names once they're loaded
+    // Update chat history with persona names and titles once they're loaded
+    const personaSessionCounts: Record<string, number> = {}
+    
     setChatHistory(prevHistory =>
-      prevHistory.map(session => ({
-        ...session,
-        persona: session.personaId && personaDetails[session.personaId] 
+      prevHistory.map(session => {
+        const updatedPersonaName = session.personaId && personaDetails[session.personaId] 
           ? personaDetails[session.personaId]
           : session.persona
-      }))
+          
+        // Update title if it was generated or is untitled
+        let updatedTitle = session.title
+        if (!session.title || session.title === "Untitled Session" || session.title.includes(" - ")) {
+          if (!personaSessionCounts[updatedPersonaName]) {
+            personaSessionCounts[updatedPersonaName] = 0;
+          }
+          personaSessionCounts[updatedPersonaName]++;
+          updatedTitle = `${updatedPersonaName} - ${personaSessionCounts[updatedPersonaName]}`;
+        }
+        
+        return {
+          ...session,
+          persona: updatedPersonaName,
+          title: updatedTitle
+        }
+      })
     )
   }, [personaDetails])
 
