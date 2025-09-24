@@ -23,9 +23,8 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: npm install, build, and test frontend
+      - name: npm install, build, and test
         run: |
-          cd frontend
           npm install
           npm run build --if-present
           npm run test --if-present
@@ -52,9 +51,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.__clientidsecretname__ }}
-          tenant-id: ${{ secrets.__tenantidsecretname__ }}
-          subscription-id: ${{ secrets.__subscriptionidsecretname__ }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E3F210B3EBB1462FB20C9D32F13F09A6 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_900A9E073CCE458EA9054519C080FCE3 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E9F8BC9847C24C0D861AFAF75110E86B }}
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
@@ -63,3 +62,4 @@ jobs:
           app-name: 'sophia-c4b'
           slot-name: 'Production'
           package: .
+          
