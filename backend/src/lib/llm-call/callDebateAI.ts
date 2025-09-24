@@ -62,7 +62,7 @@ Your Response:`),
 
   const chatModel = new AzureChatOpenAI({
     model: "gpt-5-nano",
-    temperature: 0, // Lower temperature to reduce hallucinations
+    temperature: 1, // Lower temperature to reduce hallucinations
     azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
     azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
     azureOpenAIApiDeploymentName:

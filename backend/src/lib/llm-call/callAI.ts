@@ -58,6 +58,13 @@ Important Rules:
 4. Try to answer in a concise manner, ideally under 200 words.
 5. Maintain persona's unique style, tone, and worldview.
 6. KG relations may inform your reasoning but do not mention or cite them.
+7. At the end of your response, list only the URLs you used to generate the answer, between these markers:
+
+[SOURCES_USED_START]
+<url1>
+<url2>
+...
+[SOURCES_USED_END]
 `),
     HumanMessagePromptTemplate.fromTemplate(`
 User Question: {question}
@@ -106,7 +113,7 @@ Retrieved Context:
   rawText = rawText?.trim();
   if (!rawText) rawText = "Answer not in context";
 
-  // --- 8. Extract sources from context ---
+  // --- 8. Extract all possible sources from context ---
   const sourceRegex =
     /\(Source:\s*(https?:\/\/[^\s,]+),\s*Score:\s*([\d.]+)\)/gi;
 
@@ -120,20 +127,36 @@ Retrieved Context:
     }
   }
 
-  // --- 9. Build final formatted answer ---
-  let finalAnswer = rawText;
-  let sourcesArray: { url?: string; score?: string }[] = [];
+  // --- 9. Extract sources actually used (from model output) ---
+  const sourceUsedRegex =
+    /\[SOURCES_USED_START\]([\s\S]*?)\[SOURCES_USED_END\]/i;
+  const usedSourcesMatch = rawText.match(sourceUsedRegex);
 
-  // ✅ Only attach sources if the response does NOT contain "answer not in context"
-  if (!/answer not in context/i.test(rawText) && uniqueSources.size > 0) {
-    finalAnswer += `\n\n**Sources**\n${Array.from(uniqueSources.values())
+  let sourcesArray: { url?: string; score?: string }[] = [];
+  let finalAnswer = rawText;
+
+  if (usedSourcesMatch) {
+    const usedUrls = usedSourcesMatch[1]
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => !!line);
+
+    sourcesArray = usedUrls
+      .filter((url) => uniqueSources.has(url))
+      .map((url) => uniqueSources.get(url)!);
+
+    // Remove the [SOURCES_USED_START] ... [SOURCES_USED_END] block from answer
+    finalAnswer = rawText.replace(sourceUsedRegex, "").trim();
+  }
+
+  // --- 10. Add formatted sources only if present and answer is not "not in context" ---
+  if (!/answer not in context/i.test(finalAnswer) && sourcesArray.length > 0) {
+    finalAnswer += `\n\n**Sources**\n${sourcesArray
       .map(
         (source, index) =>
           `${index + 1}. [${source.url}] (Score: ${source.score})`
       )
       .join("\n")}`;
-
-    sourcesArray = Array.from(uniqueSources.values());
   }
 
   return {
